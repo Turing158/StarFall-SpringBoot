@@ -1,7 +1,7 @@
 target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
-!**/src/test/**/target/
+!**/src/com.starfall.test/**/target/
 
 ### IntelliJ IDEA ###
 .idea/modules.xml
@@ -29,7 +29,7 @@ target/
 /.nb-gradle/
 build/
 !**/src/main/**/build/
-!**/src/test/**/build/
+!**/src/com.starfall.test/**/build/
 
 ### VS Code ###
 .vscode/
