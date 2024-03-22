@@ -2,7 +2,7 @@ create table notice
 (
     id   int          not null
         primary key,
-    info varchar(255) null
+    content varchar(255) null
 );
 
 create table user
