@@ -12,6 +12,8 @@ public interface UserDao {
     int existUser(String user);
     @Select("select count(*) from starfall.user where email = #{email}")
     int existEmail(String email);
+
+
     @Select("select * from starfall.user where user = #{account} or email = #{account}")
     User findByUserOrEmail(String account);
 

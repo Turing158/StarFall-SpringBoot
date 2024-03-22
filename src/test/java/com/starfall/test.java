@@ -25,6 +25,6 @@ public class test {
 
     @Test
     public void testLogin(){
-        System.out.println(userService.login("admin1", ""));
+        System.out.println(userService.login("admin1", "",""));
     }
 }

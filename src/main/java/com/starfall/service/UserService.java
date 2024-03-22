@@ -16,9 +16,9 @@ public class UserService {
     UserDao userDao;
     @Autowired
     AECSecure aecSecure;
-    public ResultMsg login(String account, String password) {
+    public ResultMsg login(String account, String password,String code) {
         ResultMsg resultMsg = new ResultMsg();
-        String match = "/@/g";
+        String match = "\\w*@\\w*";
         boolean flag = account.matches(match);
         if(flag){
             if(userDao.existUser(account) == 1){
@@ -47,8 +47,10 @@ public class UserService {
                     user.getExp(),
                     user.getLevel()
             );
-            resultMsg.setData(userOut);
+            resultMsg.setObject(userOut);
+            return resultMsg;
         }
+        resultMsg.setMsg("PASSWORD_ERROR");
         return resultMsg;
     }
 
@@ -71,7 +73,17 @@ public class UserService {
         resultMsg.setMsg("USER_ERROR");
         return resultMsg;
     }
+    public ResultMsg checkEmail(String email){
+        ResultMsg resultMsg = new ResultMsg();
+        int status = userDao.existEmail(email);
+        if(status == 1){
+            resultMsg.setMsg("SUCCESS");
+            return resultMsg;
+        }
+        resultMsg.setMsg("EMAIL_ERROR");
 
+        return resultMsg;
+    }
 
     public ResultMsg settingInfo(String user,String name,String gender,String birthday){
         ResultMsg resultMsg = new ResultMsg();

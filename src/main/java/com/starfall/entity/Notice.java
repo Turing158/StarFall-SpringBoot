@@ -10,5 +10,5 @@ import java.io.Serializable;
 @AllArgsConstructor
 public class Notice implements Serializable {
     int id;
-    String info;
+    String content;
 }

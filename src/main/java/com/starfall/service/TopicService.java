@@ -11,10 +11,10 @@ public class TopicService {
     @Autowired
     TopicDao topicDao;
 
-    public ResultMsg findAllTopic(){
+    public ResultMsg findAllTopic(int page){
         ResultMsg resultMsg = new ResultMsg();
         resultMsg.setMsg("SUCCESS");
-        resultMsg.setData(topicDao.findAllTopic());
+        resultMsg.setObject(topicDao.findAllTopic((page-1)*10));
         return resultMsg;
     }
 }

@@ -9,5 +9,5 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ResultMsg {
     String msg;
-    Object data;
+    Object object;
 }
