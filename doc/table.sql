@@ -47,7 +47,7 @@ create table topicitem
 (
     topicId    int          null,
     topicTitle varchar(100) null,
-    enTitle    int          null,
+    enTitle    varchar(100) null,
     source     varchar(10)  null,
     version    varchar(10)  null,
     author     varchar(50)  null,

@@ -3,28 +3,6 @@ INSERT INTO starfall.user (user, password, name, gender, email, birthday, exp, l
 INSERT INTO starfall.user (user, password, name, gender, email, birthday, exp, level, head) VALUES ('test', '2679a5a3e44284f50cc484d196d52ee4', '测试账号', 0, 'test@test.com', '2024-03-21', 10, 1, null);
 
 
-# likelog
-INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (2, 'admin', 1, '2023-08-29');
-INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (3, 'admin', 2, '2023-08-29');
-INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (5, 'admin', 2, '2023-08-29');
-INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (9, 'admin', 2, '2023-08-29');
-INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (11, 'admin', 1, '2023-08-29');
-INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (1, 'asd', 1, '2023-08-29');
-INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (2, 'asd', 1, '2023-08-29');
-INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (3, 'asd', 1, '2023-08-29');
-INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (4, 'asd', 2, '2023-08-29');
-INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (8, 'asd', 1, '2023-08-29');
-INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (11, 'asd', 2, '2023-08-29');
-INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (9, 'asd', 1, '2023-08-29');
-INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (1, 'test', 1, '2023-08-29');
-INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (2, 'test', 2, '2023-08-29');
-INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (3, 'test', 1, '2023-08-29');
-INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (5, 'test', 2, '2023-08-29');
-INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (8, 'test', 2, '2023-08-29');
-INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (10, 'test', 1, '2023-08-29');
-INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (11, 'test', 1, '2023-08-29');
-INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (1, 'admin', 1, '2023-11-12');
-INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (4, 'admin', 1, '2023-09-19');
 
 
 # notice
@@ -63,3 +41,29 @@ INSERT INTO starfall.topicitem (topicId, topicTitle, enTitle, source, version, a
 INSERT INTO starfall.topicitem (topicId, topicTitle, enTitle, source, version, author, language, address, download) VALUES (10, '高科技电力', 'Advanced Electricity', '搬运', '1.10-1.12', '作者', '简体中文|English', 'https://www.spigotmc.org/resources/advanced-electricity.56514/', 'https://www.spigotmc.org/resources/advanced-electricity.56514/download?version=221252');
 INSERT INTO starfall.topicitem (topicId, topicTitle, enTitle, source, version, author, language, address, download) VALUES (11, '维护模式', 'MaintenanceMode', '搬运', '1.8-1.12', 'kennytv', '简体中文|English', 'https://www.spigotmc.org/resources/maintenancemode-bungee-and-spigot-support.40699/', 'https://www.spigotmc.org/resources/maintenancemode-bungee-and-spigot-support.40699/download?version=217708');
 INSERT INTO starfall.topicitem (topicId, topicTitle, enTitle, source, version, author, language, address, download) VALUES (12, '多种语言', 'Language Barrier Breaker', '搬运', '1.8-1.12', '作者', '简体中文|English', 'https://www.spigotmc.org/resources/rosetta-stone-language-barrier-breaker.55570/', 'https://www.spigotmc.org/resources/rosetta-stone-language-barrier-breaker.55570/download?version=217291');
+
+
+
+
+# likelog
+INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (2, 'admin', 1, '2023-08-29');
+INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (3, 'admin', 2, '2023-08-29');
+INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (5, 'admin', 2, '2023-08-29');
+INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (9, 'admin', 2, '2023-08-29');
+INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (11, 'admin', 1, '2023-08-29');
+INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (1, 'asd', 1, '2023-08-29');
+INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (2, 'asd', 1, '2023-08-29');
+INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (3, 'asd', 1, '2023-08-29');
+INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (4, 'asd', 2, '2023-08-29');
+INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (8, 'asd', 1, '2023-08-29');
+INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (11, 'asd', 2, '2023-08-29');
+INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (9, 'asd', 1, '2023-08-29');
+INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (1, 'test', 1, '2023-08-29');
+INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (2, 'test', 2, '2023-08-29');
+INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (3, 'test', 1, '2023-08-29');
+INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (5, 'test', 2, '2023-08-29');
+INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (8, 'test', 2, '2023-08-29');
+INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (10, 'test', 1, '2023-08-29');
+INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (11, 'test', 1, '2023-08-29');
+INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (1, 'admin', 1, '2023-11-12');
+INSERT INTO starfall.likelog (topicId, user, state, date) VALUES (4, 'admin', 1, '2023-09-19');
