@@ -54,18 +54,53 @@ public class UserService {
 
     public ResultMsg register(String user, String password, String email){
         ResultMsg resultMsg = new ResultMsg();
-        resultMsg.setMsg("USER_ERROR");
         if(userDao.existUser(user) == 0){
-            AECSecure aecSecure = new AECSecure();
-            LocalDateTime ldt = LocalDateTime.now();
-            String date = ldt.getYear() + "-" + ldt.getMonthValue() + "-" + ldt.getDayOfMonth();
-            String name = "新用户"+ldt.getYear() + ldt.getMonthValue() + ldt.getDayOfMonth();
-            User userObj = new User(user, aecSecure.encrypt(password), name, 0,email, date, 0, 0);
-            userDao.insertUser(userObj);
+            if(userDao.existEmail(email) == 0){
+                AECSecure aecSecure = new AECSecure();
+                LocalDateTime ldt = LocalDateTime.now();
+                String date = ldt.getYear() + "-" + ldt.getMonthValue() + "-" + ldt.getDayOfMonth();
+                String name = "新用户"+ldt.getYear() + ldt.getMonthValue() + ldt.getDayOfMonth();
+                User userObj = new User(user, aecSecure.encrypt(password), name, 0,email, date, 0, 1);
+                userDao.insertUser(userObj);
+                resultMsg.setMsg("SUCCESS");
+                return resultMsg;
+            }
+            resultMsg.setMsg("EMAIL_ERROR");
+            return resultMsg;
+        }
+        resultMsg.setMsg("USER_ERROR");
+        return resultMsg;
+    }
+
+
+    public ResultMsg settingInfo(String user,String name,String gender,String birthday){
+        ResultMsg resultMsg = new ResultMsg();
+        int status = userDao.updateInfo(user,name,gender,birthday);
+        if(status == 1){
             resultMsg.setMsg("SUCCESS");
             return resultMsg;
         }
-        return null;
+        resultMsg.setMsg("DATASOURCE_ERROR");
+        return resultMsg;
+    }
+
+
+    public ResultMsg settingPassword(String user,String oldPassword,String newPassword){
+        ResultMsg resultMsg = new ResultMsg();
+        User userObj = userDao.findByUserOrEmail(user);
+        String encryptOldPassword = aecSecure.encrypt(oldPassword);
+        if(userObj.getPassword().equals(encryptOldPassword)){
+            String encryptNewPassword = aecSecure.encrypt(newPassword);
+            int status = userDao.updatePassword(user,encryptNewPassword);
+            if(status == 1){
+                resultMsg.setMsg("SUCCESS");
+                return resultMsg;
+            }
+            resultMsg.setMsg("DATASOURCE_ERROR");
+            return resultMsg;
+        }
+        resultMsg.setMsg("PASSWORD_ERROR");
+        return resultMsg;
     }
 
 }
