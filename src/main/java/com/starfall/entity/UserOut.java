@@ -25,7 +25,6 @@ public class UserOut {
         this.birthday = birthday;
         this.exp = exp;
         this.level = level;
-        Exp expUtil = new Exp();
-        this.maxExp = expUtil.getMaxExp(level);
+        this.maxExp = Exp.getMaxExp(level);
     }
 }

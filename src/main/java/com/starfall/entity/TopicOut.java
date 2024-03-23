@@ -1,15 +1,21 @@
 package com.starfall.entity;
 
+import com.starfall.util.Exp;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.io.Serializable;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class TopicItem implements Serializable {
-    int topicId;
+public class TopicOut {
+
+    int id;
+    String title;
+    String label;
+    String date;
+    int view;
+    int comment;
     String topicTitle;
     String enTitle;
     String source;
@@ -19,4 +25,10 @@ public class TopicItem implements Serializable {
     String address;
     String download;
     String content;
+    String user;
+    String name;
+    int exp;
+    int level;
+    int maxExp = Exp.getMaxExp(level);
+    String head;
 }

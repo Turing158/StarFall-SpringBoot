@@ -17,4 +17,17 @@ public class TopicService {
         resultMsg.setObject(topicDao.findAllTopic((page-1)*10));
         return resultMsg;
     }
+
+
+    public ResultMsg getTopicInfo(int id){
+        ResultMsg resultMsg = new ResultMsg();
+        boolean flag = topicDao.findTopicInfoById(id) != null;
+        if(flag){
+            resultMsg.setObject(topicDao.findTopicInfoById(id));
+            resultMsg.setMsg("SUCCESS");
+            return resultMsg;
+        }
+        resultMsg.setMsg("ID_ERROR");
+        return resultMsg;
+    }
 }

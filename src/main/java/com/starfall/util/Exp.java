@@ -1,7 +1,7 @@
 package com.starfall.util;
 
 public class Exp {
-    public int getMaxExp(int level){
+    public static int getMaxExp(int level){
         switch (level){
             case 1:
                 return 100;
@@ -24,9 +24,10 @@ public class Exp {
             case 10:
                 return 12610;
         }
-        return 0;
+        return 999999;
     }
-    public int checkAndLevelUp(int exp,int level){
+
+    public static int checkAndLevelUp(int exp,int level){
         int maxExp = getMaxExp(level);
         return exp - maxExp;
     }

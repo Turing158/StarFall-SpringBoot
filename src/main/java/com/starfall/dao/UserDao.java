@@ -17,8 +17,8 @@ public interface UserDao {
     @Select("select * from starfall.user where user = #{account} or email = #{account}")
     User findByUserOrEmail(String account);
 
-    @Insert("insert into starfall.user (user, password,name,gender,birthday,exp,level) " +
-            "values (#{user},#{password},#{name},#{gender},#{birthday},#{exp},#{level})")
+    @Insert("insert into starfall.user (user, password,name,gender,email,birthday,exp,level,head) " +
+            "values (#{user},#{password},#{name},#{gender},#{email},#{birthday},#{exp},#{level},null)")
     int insertUser(User user);
 
 

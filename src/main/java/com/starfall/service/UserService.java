@@ -5,6 +5,9 @@ import com.starfall.entity.ResultMsg;
 import com.starfall.entity.User;
 import com.starfall.entity.UserOut;
 import com.starfall.util.AECSecure;
+import com.starfall.util.CodeUtil;
+import com.starfall.util.MailUtil;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -16,21 +19,29 @@ public class UserService {
     UserDao userDao;
     @Autowired
     AECSecure aecSecure;
-    public ResultMsg login(String account, String password,String code) {
+    @Autowired
+    MailUtil mailUtil;
+    public ResultMsg login(HttpSession session,String account, String password,String code) {
         ResultMsg resultMsg = new ResultMsg();
-        String match = "\\w*@\\w*";
-        boolean flag = account.matches(match);
-        if(flag){
+        String sessionCode = (String) session.getAttribute("code");
+        System.out.println(session.getId());
+        if(sessionCode.equals(code)){
+            String match = "\\w*@\\w*";
+            boolean flag = account.matches(match);
+            if(flag){
+                if(userDao.existUser(account) == 1){
+                    return loginSuccess(account, password, resultMsg);
+                }
+                resultMsg.setMsg("EMAIL_ERROR");
+                return resultMsg;
+            }
             if(userDao.existUser(account) == 1){
                 return loginSuccess(account, password, resultMsg);
             }
-            resultMsg.setMsg("EMAIL_ERROR");
+            resultMsg.setMsg("USER_ERROR");
             return resultMsg;
         }
-        if(userDao.existUser(account) == 1){
-            return loginSuccess(account, password, resultMsg);
-        }
-        resultMsg.setMsg("USER_ERROR");
+        resultMsg.setMsg("CODE_ERROR");
         return resultMsg;
     }
 
@@ -54,17 +65,22 @@ public class UserService {
         return resultMsg;
     }
 
-    public ResultMsg register(String user, String password, String email){
+    public ResultMsg register(HttpSession session,String user, String password, String email,String emailCode,String code){
         ResultMsg resultMsg = new ResultMsg();
         if(userDao.existUser(user) == 0){
             if(userDao.existEmail(email) == 0){
-                AECSecure aecSecure = new AECSecure();
-                LocalDateTime ldt = LocalDateTime.now();
-                String date = ldt.getYear() + "-" + ldt.getMonthValue() + "-" + ldt.getDayOfMonth();
-                String name = "新用户"+ldt.getYear() + ldt.getMonthValue() + ldt.getDayOfMonth();
-                User userObj = new User(user, aecSecure.encrypt(password), name, 0,email, date, 0, 1);
-                userDao.insertUser(userObj);
-                resultMsg.setMsg("SUCCESS");
+                String emailCodeSession = (String) session.getAttribute("emailCode");
+                if(emailCodeSession.equals(emailCode.toUpperCase())){
+                    AECSecure aecSecure = new AECSecure();
+                    LocalDateTime ldt = LocalDateTime.now();
+                    String date = ldt.getYear() + "-" + ldt.getMonthValue() + "-" + ldt.getDayOfMonth();
+                    String name = "新用户"+ldt.getYear() + ldt.getMonthValue() + ldt.getDayOfMonth();
+                    User userObj = new User(user, aecSecure.encrypt(password), name, 0,email, date, 0, 1);
+                    userDao.insertUser(userObj);
+                    resultMsg.setMsg("SUCCESS");
+                    return resultMsg;
+                }
+                resultMsg.setMsg("EMAIL_CODE_ERROR");
                 return resultMsg;
             }
             resultMsg.setMsg("EMAIL_ERROR");
@@ -73,15 +89,17 @@ public class UserService {
         resultMsg.setMsg("USER_ERROR");
         return resultMsg;
     }
-    public ResultMsg checkEmail(String email){
+    public ResultMsg getEmailCode(HttpSession session, String email){
         ResultMsg resultMsg = new ResultMsg();
         int status = userDao.existEmail(email);
-        if(status == 1){
+        if(status == 0){
+            String code = CodeUtil.getCode(6);
+            mailUtil.reg_mail(email,code);
+            session.setAttribute("emailCode",code.toUpperCase());
             resultMsg.setMsg("SUCCESS");
             return resultMsg;
         }
         resultMsg.setMsg("EMAIL_ERROR");
-
         return resultMsg;
     }
 

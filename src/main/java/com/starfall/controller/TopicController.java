@@ -19,4 +19,9 @@ public class TopicController {
     }
 
 
+    @PostMapping("/getTopicInfo")
+    public ResultMsg getTopicInfo(int id){
+        return topicService.getTopicInfo(id);
+    }
+
 }

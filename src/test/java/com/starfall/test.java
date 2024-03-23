@@ -1,5 +1,6 @@
 package com.starfall;
 
+import com.starfall.dao.TopicDao;
 import com.starfall.service.UserService;
 import com.starfall.util.AECSecure;
 import org.junit.Test;
@@ -23,8 +24,15 @@ public class test {
     UserService userService;
 
 
+//    @Test
+//    public void testLogin(){
+//        System.out.println(userService.login("admin1", "",""));
+//    }
+
+    @Autowired
+    TopicDao topicDao;
     @Test
-    public void testLogin(){
-        System.out.println(userService.login("admin1", "",""));
+    public void testTopic(){
+        System.out.println(topicDao.findTopicInfoById(1));
     }
 }
