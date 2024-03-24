@@ -13,6 +13,8 @@ public class Topic implements Serializable {
     String title;
     String label;
     String user;
+    String name;
+    String head;
     String date;
     int view;
     int comment;

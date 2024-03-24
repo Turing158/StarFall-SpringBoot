@@ -24,4 +24,9 @@ public class TopicController {
         return topicService.getTopicInfo(id);
     }
 
+
+    @PostMapping("/findAllTopicByUser")
+    public ResultMsg findAllTopicByUser(int page,String user){
+        return topicService.findAllTopicByUser(page,user);
+    }
 }

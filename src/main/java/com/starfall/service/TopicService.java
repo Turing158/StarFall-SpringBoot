@@ -15,6 +15,7 @@ public class TopicService {
         ResultMsg resultMsg = new ResultMsg();
         resultMsg.setMsg("SUCCESS");
         resultMsg.setObject(topicDao.findAllTopic((page-1)*10));
+        resultMsg.setNum(topicDao.findTopicTotal());
         return resultMsg;
     }
 
@@ -28,6 +29,15 @@ public class TopicService {
             return resultMsg;
         }
         resultMsg.setMsg("ID_ERROR");
+        return resultMsg;
+    }
+
+
+    public ResultMsg findAllTopicByUser(int page,String user){
+        ResultMsg resultMsg = new ResultMsg();
+        resultMsg.setMsg("SUCCESS");
+        resultMsg.setObject(topicDao.findTopicByUser((page-1)*10,user));
+        resultMsg.setNum(topicDao.findTopicTotalByUser(user));
         return resultMsg;
     }
 }

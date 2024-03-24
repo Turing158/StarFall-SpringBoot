@@ -10,4 +10,9 @@ import lombok.NoArgsConstructor;
 public class ResultMsg {
     String msg;
     Object object;
+    int num;
+    public ResultMsg(String msg,Object object) {
+        this.msg = msg;
+        this.object = object;
+    }
 }
