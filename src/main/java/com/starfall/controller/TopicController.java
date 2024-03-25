@@ -14,8 +14,8 @@ public class TopicController {
     TopicService topicService;
 
     @PostMapping("/findAllTopic")
-    public ResultMsg findAllTopic(int page){
-        return topicService.findAllTopic(page);
+    public ResultMsg findAllTopic(int page,String label,String version){
+        return topicService.findAllTopic(page,label,version);
     }
 
 
@@ -28,5 +28,10 @@ public class TopicController {
     @PostMapping("/findAllTopicByUser")
     public ResultMsg findAllTopicByUser(int page,String user){
         return topicService.findAllTopicByUser(page,user);
+    }
+
+    @PostMapping("/findTopicVersion")
+    public ResultMsg findTopicVersion(){
+        return topicService.findTopicVersion();
     }
 }

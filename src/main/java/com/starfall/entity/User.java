@@ -17,4 +17,5 @@ public class User implements Serializable {
     String birthday;
     int exp;
     int level;
+    String avatar;
 }

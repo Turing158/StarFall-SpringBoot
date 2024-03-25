@@ -56,7 +56,8 @@ public class UserService {
                     user.getEmail(),
                     user.getBirthday(),
                     user.getExp(),
-                    user.getLevel()
+                    user.getLevel(),
+                    user.getAvatar()
             );
             resultMsg.setObject(userOut);
             return resultMsg;
@@ -75,7 +76,7 @@ public class UserService {
                     LocalDateTime ldt = LocalDateTime.now();
                     String date = ldt.getYear() + "-" + ldt.getMonthValue() + "-" + ldt.getDayOfMonth();
                     String name = "新用户"+ldt.getYear() + ldt.getMonthValue() + ldt.getDayOfMonth();
-                    User userObj = new User(user, aecSecure.encrypt(password), name, 0,email, date, 0, 1);
+                    User userObj = new User(user, aecSecure.encrypt(password), name, 0,email, date, 0, 1,"");
                     userDao.insertUser(userObj);
                     resultMsg.setMsg("SUCCESS");
                     return resultMsg;

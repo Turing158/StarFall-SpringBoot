@@ -17,7 +17,8 @@ public class UserOut {
     int exp;
     int maxExp;
     int level;
-    public UserOut(String user, String name, int gender,String email,String birthday,int exp,int level){
+    String avatar;
+    public UserOut(String user, String name, int gender,String email,String birthday,int exp,int level,String avatar){
         this.user = user;
         this.name = name;
         this.gender = gender;
@@ -25,6 +26,7 @@ public class UserOut {
         this.birthday = birthday;
         this.exp = exp;
         this.level = level;
+        this.avatar = avatar;
         this.maxExp = Exp.getMaxExp(level);
     }
 }

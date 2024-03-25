@@ -30,5 +30,5 @@ public class TopicOut {
     int exp;
     int level;
     int maxExp = Exp.getMaxExp(level);
-    String head;
+    String avatar;
 }

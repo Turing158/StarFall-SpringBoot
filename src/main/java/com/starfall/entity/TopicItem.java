@@ -13,7 +13,6 @@ public class TopicItem implements Serializable {
     String topicTitle;
     String enTitle;
     String source;
-    String version;
     String author;
     String language;
     String address;

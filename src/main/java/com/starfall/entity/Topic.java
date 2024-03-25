@@ -14,8 +14,9 @@ public class Topic implements Serializable {
     String label;
     String user;
     String name;
-    String head;
+    String avatar;
     String date;
     int view;
     int comment;
+    String version;
 }
