@@ -27,4 +27,9 @@ public class UserController {
     public ResultMsg getEmailCode(HttpSession session, String email){
         return userService.getEmailCode(session,email);
     }
+
+    @PostMapping("/updateUserInfo")
+    public ResultMsg settingInfo(HttpSession session,String user,String name,String gender,String birthday,String code){
+        return userService.settingInfo(session,user,name,gender,birthday,code);
+    }
 }

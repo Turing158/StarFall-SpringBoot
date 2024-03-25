@@ -104,14 +104,20 @@ public class UserService {
         return resultMsg;
     }
 
-    public ResultMsg settingInfo(String user,String name,String gender,String birthday){
+    public ResultMsg settingInfo(HttpSession session,String user,String name,String gender,String birthday,String code){
         ResultMsg resultMsg = new ResultMsg();
-        int status = userDao.updateInfo(user,name,gender,birthday);
-        if(status == 1){
-            resultMsg.setMsg("SUCCESS");
+        String codeSession = (String) session.getAttribute("code");
+        if(codeSession.equals(code)){
+            int status = userDao.updateInfo(user,name,gender,birthday);
+            if(status == 1){
+                resultMsg.setObject(userDao.findByUserOrEmail(user));
+                resultMsg.setMsg("SUCCESS");
+                return resultMsg;
+            }
+            resultMsg.setMsg("DATASOURCE_ERROR");
             return resultMsg;
         }
-        resultMsg.setMsg("DATASOURCE_ERROR");
+        resultMsg.setMsg("CODE_ERROR");
         return resultMsg;
     }
 
