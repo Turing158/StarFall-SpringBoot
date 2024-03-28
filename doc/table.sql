@@ -1,9 +1,10 @@
 create table notice
 (
-    id   int          not null
+    id      int          not null
         primary key,
     content varchar(255) null
 );
+
 
 create table user
 (
@@ -16,8 +17,10 @@ create table user
     birthday date         null,
     exp      int          null,
     level    int          null,
-    head     varchar(255) null
+    avatar   varchar(255) null
 );
+
+
 
 create table topic
 (
@@ -29,9 +32,29 @@ create table topic
     date    date         null,
     view    int          null,
     comment int          null,
+    version varchar(10)  null,
     constraint topic_user_user_fk
         foreign key (user) references user (user)
 );
+
+
+
+create table topicitem
+(
+    topicId    int           null,
+    topicTitle varchar(100)  null,
+    enTitle    varchar(100)  null,
+    source     varchar(10)   null,
+    author     varchar(50)   null,
+    language   varchar(100)  null,
+    address    varchar(255)  null,
+    download   varchar(255)  null,
+    content    varchar(8126) null,
+    constraint topicItem_topic_id_fk
+        foreign key (topicId) references topic (id)
+);
+
+
 
 create table likelog
 (
@@ -43,18 +66,13 @@ create table likelog
         foreign key (topicId) references topic (id)
 );
 
-create table topicitem
+create table comment
 (
-    topicId    int          null,
-    topicTitle varchar(100) null,
-    enTitle    varchar(100) null,
-    source     varchar(10)  null,
-    version    varchar(10)  null,
-    author     varchar(50)  null,
-    language   varchar(100) null,
-    address    varchar(255) null,
-    download   varchar(255) null,
-    constraint topicItem_topic_id_fk
-        foreign key (topicId) references topic (id)
+    topicid int           null,
+    user    varchar(40)   null,
+    date    datetime      null,
+    content varchar(8164) null
 );
+
+
 
