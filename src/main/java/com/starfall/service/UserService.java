@@ -110,7 +110,17 @@ public class UserService {
         if(codeSession.equals(code)){
             int status = userDao.updateInfo(user,name,gender,birthday);
             if(status == 1){
-                resultMsg.setObject(userDao.findByUserOrEmail(user));
+                User userObj = userDao.findByUserOrEmail(user);
+                resultMsg.setObject(new UserOut(
+                        userObj.getUser(),
+                        userObj.getName(),
+                        userObj.getGender(),
+                        userObj.getEmail(),
+                        userObj.getBirthday(),
+                        userObj.getExp(),
+                        userObj.getLevel(),
+                        userObj.getAvatar()
+                ));
                 resultMsg.setMsg("SUCCESS");
                 return resultMsg;
             }
@@ -122,21 +132,40 @@ public class UserService {
     }
 
 
-    public ResultMsg settingPassword(String user,String oldPassword,String newPassword){
+    public ResultMsg settingPassword(HttpSession session,String user,String oldPassword,String newPassword,String code){
         ResultMsg resultMsg = new ResultMsg();
-        User userObj = userDao.findByUserOrEmail(user);
-        String encryptOldPassword = aecSecure.encrypt(oldPassword);
-        if(userObj.getPassword().equals(encryptOldPassword)){
-            String encryptNewPassword = aecSecure.encrypt(newPassword);
-            int status = userDao.updatePassword(user,encryptNewPassword);
-            if(status == 1){
-                resultMsg.setMsg("SUCCESS");
+        String codeSession = (String) session.getAttribute("code");
+        if(codeSession.equals(code)){
+            User userObj = userDao.findByUserOrEmail(user);
+            String encryptOldPassword = aecSecure.encrypt(oldPassword);
+            if(userObj.getPassword().equals(encryptOldPassword)){
+                String encryptNewPassword = aecSecure.encrypt(newPassword);
+                int status = userDao.updatePassword(user,encryptNewPassword);
+                if(status == 1){
+                    resultMsg.setMsg("SUCCESS");
+                    return resultMsg;
+                }
+                resultMsg.setMsg("DATASOURCE_ERROR");
                 return resultMsg;
             }
-            resultMsg.setMsg("DATASOURCE_ERROR");
+            resultMsg.setMsg("PASSWORD_ERROR");
             return resultMsg;
         }
-        resultMsg.setMsg("PASSWORD_ERROR");
+        resultMsg.setMsg("CODE_ERROR");
+        return resultMsg;
+    }
+
+
+    public ResultMsg findUserByUser(String user){
+        ResultMsg resultMsg = new ResultMsg();
+        UserOut userObj = userDao.findByUser(user);
+        if(userObj != null){
+            userObj.orderMaxExp();
+            resultMsg.setObject(userObj);
+            resultMsg.setMsg("SUCCESS");
+            return resultMsg;
+        }
+        resultMsg.setMsg("USER_ERROR");
         return resultMsg;
     }
 

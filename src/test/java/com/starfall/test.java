@@ -1,6 +1,7 @@
 package com.starfall;
 
 import com.starfall.dao.TopicDao;
+import com.starfall.dao.UserDao;
 import com.starfall.service.UserService;
 import com.starfall.util.AECSecure;
 import org.junit.Test;
@@ -8,6 +9,8 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
+
+import java.util.Random;
 
 @SpringBootTest
 @RunWith(SpringRunner.class)
@@ -24,15 +27,37 @@ public class test {
     UserService userService;
 
 
-//    @Test
-//    public void testLogin(){
+    @Autowired
+    UserDao userDao;
+    @Autowired
+    AECSecure aecSecure;
+
+    @Test
+    public void testLogin(){
 //        System.out.println(userService.login("admin1", "",""));
-//    }
+        String password = userDao.findByUserOrEmail("admin").getPassword();
+        System.out.println(aecSecure.decrypt(password));
+    }
 
     @Autowired
     TopicDao topicDao;
     @Test
     public void testTopic(){
         System.out.println(topicDao.findTopicInfoById(1));
+    }
+
+
+    @Test
+    public void insert100comment(){
+        Random r = new Random();
+        for (int i = 0; i < 100; i++) {
+            System.out.println(topicDao.insertComment(r.nextInt(1,12), "admin", null, "测试评论"+r.nextInt()));
+        }
+    }
+
+
+    @Test
+    public void testGetComment(){
+        System.out.println(topicDao.findCommentByTopicId(1,0));
     }
 }

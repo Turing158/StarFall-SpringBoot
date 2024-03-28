@@ -34,4 +34,11 @@ public class TopicController {
     public ResultMsg findTopicVersion(){
         return topicService.findTopicVersion();
     }
+
+
+    @PostMapping("/findCommentByTopic")
+    public ResultMsg findTopicLabel(int id,int page ){
+        return topicService.findCommentByTopicId(id,page);
+    }
+
 }

@@ -18,20 +18,25 @@ public class TopicService {
         ResultMsg resultMsg = new ResultMsg();
         resultMsg.setMsg("SUCCESS");
         List<Topic> list = null;
+        int num = 0;
         if(label.equals("无") && version.equals("无")){
             list = topicDao.findAllTopic((page-1)*10);
+            num = topicDao.findTopicTotal();
         }
         else if(label.equals("无")){
             list = topicDao.findAllTopicVersion((page-1)*10,version);
+            num = topicDao.findTopicTotalByVersion();
         }
         else if(version.equals("无")){
             list = topicDao.findAllTopicLabel((page-1)*10,label);
+            num = topicDao.findTopicTotalByLabel();
         }
         else {
             list = topicDao.findAllTopicLabelAndVersion((page-1)*10,label,version);
+            num = topicDao.findTopicTotalByLabelAndVersion();
         }
         resultMsg.setObject(list);
-        resultMsg.setNum(topicDao.findTopicTotal());
+        resultMsg.setNum(num);
         return resultMsg;
     }
 
@@ -64,4 +69,17 @@ public class TopicService {
         resultMsg.setObject(topicDao.findTopicVersion());
         return resultMsg;
     }
+
+
+    public ResultMsg findCommentByTopicId(int id,int page){
+        ResultMsg resultMsg = new ResultMsg();
+        resultMsg.setMsg("SUCCESS");
+        resultMsg.setObject(topicDao.findCommentByTopicId(id,(page-1)*10));
+        resultMsg.setNum(topicDao.findCommentCountByTopicId(id));
+        return resultMsg;
+    }
+
+
+
+
 }

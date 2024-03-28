@@ -28,8 +28,21 @@ public class UserController {
         return userService.getEmailCode(session,email);
     }
 
+
+    @PostMapping("/findUserByUser")
+    public ResultMsg findUserByUser(String user){
+        return userService.findUserByUser(user);
+    }
+
+
     @PostMapping("/updateUserInfo")
     public ResultMsg settingInfo(HttpSession session,String user,String name,String gender,String birthday,String code){
         return userService.settingInfo(session,user,name,gender,birthday,code);
+    }
+
+
+    @PostMapping("/updatePassword")
+    public ResultMsg updatePassword(HttpSession session,String user,String oldPassword,String newPassword,String code){
+        return userService.settingPassword(session,user,oldPassword,newPassword,code);
     }
 }
