@@ -55,6 +55,10 @@ public class test {
         }
     }
 
+    @Test
+    public void testUpdateUser(){
+        System.out.println(userDao.updatePassword("admin", aecSecure.encrypt("admin")));
+    }
 
     @Test
     public void testGetComment(){

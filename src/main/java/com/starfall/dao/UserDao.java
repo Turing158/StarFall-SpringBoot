@@ -29,7 +29,7 @@ public interface UserDao {
     int updateExp(String user,int exp);
 
     @Update("update starfall.user set name=#{name},gender=#{gender},birthday=#{birthday} where user=#{user}")
-    int updateInfo(String user,String name,String gender,String birthday);
+    int updateInfo(String user,String name,int gender,String birthday);
 
 
     @Update("update starfall.user set password=#{password} where user=#{user}")

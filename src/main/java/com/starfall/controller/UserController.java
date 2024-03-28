@@ -36,7 +36,7 @@ public class UserController {
 
 
     @PostMapping("/updateUserInfo")
-    public ResultMsg settingInfo(HttpSession session,String user,String name,String gender,String birthday,String code){
+    public ResultMsg settingInfo(HttpSession session,String user,String name,int gender,String birthday,String code){
         return userService.settingInfo(session,user,name,gender,birthday,code);
     }
 

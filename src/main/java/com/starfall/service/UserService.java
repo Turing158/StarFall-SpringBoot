@@ -104,7 +104,7 @@ public class UserService {
         return resultMsg;
     }
 
-    public ResultMsg settingInfo(HttpSession session,String user,String name,String gender,String birthday,String code){
+    public ResultMsg settingInfo(HttpSession session,String user,String name,int gender,String birthday,String code){
         ResultMsg resultMsg = new ResultMsg();
         String codeSession = (String) session.getAttribute("code");
         if(codeSession.equals(code)){
