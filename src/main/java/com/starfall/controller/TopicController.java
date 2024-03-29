@@ -35,6 +35,17 @@ public class TopicController {
         return topicService.findTopicVersion();
     }
 
+    @PostMapping("/getLike")
+    public ResultMsg getLike(int id,String user){
+        return topicService.getLike(id,user);
+    }
+
+    @PostMapping("/like")
+    public ResultMsg likeOrDisLike(int id,String user,int like){
+        return topicService.like(id,user,like);
+    }
+
+
 
     @PostMapping("/findCommentByTopic")
     public ResultMsg findTopicLabel(int id,int page ){

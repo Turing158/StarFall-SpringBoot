@@ -1,11 +1,13 @@
 package com.starfall.service;
 
 import com.starfall.dao.TopicDao;
+import com.starfall.entity.LikeLog;
 import com.starfall.entity.ResultMsg;
 import com.starfall.entity.Topic;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -67,6 +69,47 @@ public class TopicService {
         ResultMsg resultMsg = new ResultMsg();
         resultMsg.setMsg("SUCCESS");
         resultMsg.setObject(topicDao.findTopicVersion());
+        return resultMsg;
+    }
+
+    public ResultMsg getLike(int topicId,String user) {
+        ResultMsg resultMsg = new ResultMsg();
+        LikeLog like = topicDao.findLikeByTopicAndUser(topicId,user);
+        System.out.println(like);
+        if(like != null && like.getStatus() == 1){
+            resultMsg.setNum(topicDao.findLikeTotalByTopic(topicId));
+            resultMsg.setMsg("IS_LIKE");
+            return resultMsg;
+        }
+        else if(like != null && like.getStatus() == 2){
+            resultMsg.setMsg("IS_DISLIKE");
+            return resultMsg;
+        }
+        resultMsg.setMsg("NOT_LIKE");
+        return resultMsg;
+    }
+
+    public ResultMsg like(int topicId,String user,int like){
+        ResultMsg resultMsg = new ResultMsg();
+        LocalDateTime LDT = LocalDateTime.now();
+        String date = LDT.getYear() + "-" + LDT.getMonthValue() + "-" + LDT.getDayOfMonth() + " " + LDT.getHour() + ":" + LDT.getMinute() + ":" + LDT.getSecond();
+        LikeLog likeObj = topicDao.findLikeByTopicAndUser(topicId,user);
+        if(like == 1){
+            resultMsg.setNum(topicDao.findLikeTotalByTopic(topicId));
+        }
+        if(likeObj != null){
+            System.out.println(likeObj.getStatus());
+            if(likeObj.getStatus() != like){
+                topicDao.updateLikeStateByTopicAndUser(topicId,user,like,date);
+                resultMsg.setMsg("UPDATE_LIKE");
+                return resultMsg;
+            }
+            topicDao.updateLikeStateByTopicAndUser(topicId,user,0,date);
+            resultMsg.setMsg("ALREADY_LIKE");
+            return resultMsg;
+        }
+        topicDao.insertLike(topicId,user,like,date);
+        resultMsg.setMsg("LIKE_SUCCESS");
         return resultMsg;
     }
 
