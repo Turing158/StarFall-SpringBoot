@@ -15,4 +15,32 @@ public class ResultMsg {
         this.msg = msg;
         this.object = object;
     }
+
+    public static ResultMsg success() {
+        return new ResultMsg("success",null);
+    }
+    public static ResultMsg success(int num) {
+        return new ResultMsg("success",null,num);
+    }
+    public static ResultMsg success(Object object) {
+        return new ResultMsg("success",object);
+    }
+    public static ResultMsg success(Object object,int num) {
+        return new ResultMsg("success",object,num);
+    }
+    public static ResultMsg warning(String msg) {
+        return new ResultMsg(msg,null);
+    }
+    public static ResultMsg warning(String msg,Object object) {
+        return new ResultMsg(msg,object);
+    }
+    public static ResultMsg warning(String msg,int num) {
+        return new ResultMsg(msg,null,num);
+    }
+    public static ResultMsg warning(String msg,Object object,int num) {
+        return new ResultMsg(msg,object,num);
+    }
+    public static ResultMsg error(String msg) {
+        return new ResultMsg(msg,null);
+    }
 }

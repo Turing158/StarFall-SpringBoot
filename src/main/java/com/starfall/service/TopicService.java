@@ -16,8 +16,6 @@ public class TopicService {
     TopicDao topicDao;
 
     public ResultMsg findAllTopic(int page,String label,String version){
-        ResultMsg resultMsg = new ResultMsg();
-        resultMsg.setMsg("SUCCESS");
         List<Topic> list = null;
         int num = 0;
         if(label.equals("无") && version.equals("无")){
@@ -36,59 +34,40 @@ public class TopicService {
             list = topicDao.findAllTopicLabelAndVersion((page-1)*10,label,version);
             num = topicDao.findTopicTotalByLabelAndVersion();
         }
-        resultMsg.setObject(list);
-        resultMsg.setNum(num);
-        return resultMsg;
+        return ResultMsg.success(list,num);
     }
 
 
     public ResultMsg getTopicInfo(int id){
-        ResultMsg resultMsg = new ResultMsg();
         boolean flag = topicDao.findTopicInfoById(id) != null;
         if(flag){
-            resultMsg.setObject(topicDao.findTopicInfoById(id));
-            resultMsg.setMsg("SUCCESS");
-            return resultMsg;
+            return ResultMsg.success(topicDao.findTopicInfoById(id));
         }
-        resultMsg.setMsg("ID_ERROR");
-        return resultMsg;
+        return ResultMsg.error("ID_ERROR");
     }
 
 
     public ResultMsg findAllTopicByUser(int page,String user){
-        ResultMsg resultMsg = new ResultMsg();
-        resultMsg.setMsg("SUCCESS");
-        resultMsg.setObject(topicDao.findTopicByUser((page-1)*10,user));
-        resultMsg.setNum(topicDao.findTopicTotalByUser(user));
-        return resultMsg;
+        return ResultMsg.success(topicDao.findTopicByUser((page-1)*10,user),topicDao.findTopicTotalByUser(user));
     }
 
 
     public ResultMsg findTopicVersion(){
-        ResultMsg resultMsg = new ResultMsg();
-        resultMsg.setMsg("SUCCESS");
-        resultMsg.setObject(topicDao.findTopicVersion());
-        return resultMsg;
+        return ResultMsg.success(topicDao.findTopicVersion());
     }
 
     public ResultMsg getLike(int topicId,String user) {
-        ResultMsg resultMsg = new ResultMsg();
         LikeLog like = topicDao.findLikeByTopicAndUser(topicId,user);
         if(like != null && like.getStatus() == 1){
-            resultMsg.setNum(topicDao.findLikeTotalByTopic(topicId));
-            resultMsg.setMsg("IS_LIKE");
-            return resultMsg;
+            return ResultMsg.warning("IS_LIKE",topicDao.findLikeTotalByTopic(topicId));
         }
         else if(like != null && like.getStatus() == 2){
-            resultMsg.setMsg("IS_DISLIKE");
-            return resultMsg;
+            return ResultMsg.warning("IS_DISLIKE");
         }
-        resultMsg.setMsg("NOT_LIKE");
-        return resultMsg;
+        return ResultMsg.error("NOT_LIKE");
     }
 
     public ResultMsg like(int topicId,String user,int like){
-        ResultMsg resultMsg = new ResultMsg();
         LocalDateTime LDT = LocalDateTime.now();
         String date = LDT.getYear() + "-" + LDT.getMonthValue() + "-" + LDT.getDayOfMonth() + " " + LDT.getHour() + ":" + LDT.getMinute() + ":" + LDT.getSecond();
         LikeLog likeObj = topicDao.findLikeByTopicAndUser(topicId,user);
@@ -96,59 +75,45 @@ public class TopicService {
             if(likeObj.getStatus() != like){
                 topicDao.updateLikeStateByTopicAndUser(topicId,user,like,date);
                 if(like == 1){
-                    resultMsg.setNum(topicDao.findLikeTotalByTopic(topicId));
+                    return ResultMsg.warning("UPDATE_LIKE",topicDao.findLikeTotalByTopic(topicId));
                 }
-                resultMsg.setMsg("UPDATE_LIKE");
-                return resultMsg;
+                return ResultMsg.warning("UPDATE_LIKE");
             }
             topicDao.updateLikeStateByTopicAndUser(topicId,user,0,date);
-            resultMsg.setMsg("ALREADY_LIKE");
-            return resultMsg;
+            return ResultMsg.warning("ALREADY_LIKE");
         }
         topicDao.insertLike(topicId,user,like,date);
         if(like == 1){
-            resultMsg.setNum(topicDao.findLikeTotalByTopic(topicId));
+            return ResultMsg.warning("LIKE_SUCCESS",topicDao.findLikeTotalByTopic(topicId));
         }
-        resultMsg.setMsg("LIKE_SUCCESS");
-        return resultMsg;
+        return ResultMsg.warning("LIKE_SUCCESS");
     }
 
 
     public ResultMsg findCommentByTopicId(int id,int page){
-        ResultMsg resultMsg = new ResultMsg();
-        resultMsg.setMsg("SUCCESS");
-        resultMsg.setObject(topicDao.findCommentByTopicId(id,(page-1)*10));
-        resultMsg.setNum(topicDao.findCommentCountByTopicId(id));
-        return resultMsg;
+        return ResultMsg.success(topicDao.findCommentByTopicId(id,(page-1)*10),topicDao.findCommentCountByTopicId(id));
     }
 
 
     public ResultMsg appendComment(HttpSession session, int topicId, String user, String content, String code){
-        ResultMsg resultMsg = new ResultMsg();
         String codeSession = (String) session.getAttribute("code");
         if(codeSession.equals(code)){
             LocalDateTime LDT = LocalDateTime.now();
             String date = LDT.getYear() + "-" + LDT.getMonthValue() + "-" + LDT.getDayOfMonth() + " " + LDT.getHour() + ":" + LDT.getMinute() + ":" + LDT.getSecond();
             topicDao.insertComment(topicId,user,date,content);
-            resultMsg.setNum(topicDao.findCommentCountByTopicId(topicId));
-            resultMsg.setMsg("SUCCESS");
-            return resultMsg;
+            return ResultMsg.success(topicDao.findCommentCountByTopicId(topicId));
         }
-        resultMsg.setMsg("CODE_ERROR");
-        return resultMsg;
+        return ResultMsg.error("CODE_ERROR");
     }
 
 
     public ResultMsg deleteComment(int id,String user,String date){
-        ResultMsg resultMsg = new ResultMsg();
         topicDao.deleteComment(id,user,date);
-        resultMsg.setMsg("SUCCESS");
-        return resultMsg;
+        return ResultMsg.success();
     }
 
 
     public ResultMsg appendTopic(HttpSession session, TopicIn topicIn){
-        ResultMsg resultMsg = new ResultMsg();
         String codeSession = (String) session.getAttribute("code");
         if(codeSession.equals(topicIn.getCode())){
             int id = topicDao.findAll().get(0).getId() + 1;
@@ -173,11 +138,9 @@ public class TopicService {
                     topicIn.getDownload(),
                     topicIn.getContent()
             );
-            resultMsg.setMsg("SUCCESS");
-            return resultMsg;
+            return ResultMsg.success();
         }
-        resultMsg.setMsg("CODE_ERROR");
-        return resultMsg;
+        return ResultMsg.error("CODE_ERROR");
     }
 
 

@@ -11,6 +11,6 @@ public class NoticeService {
     NoticeDao noticeDao;
 
     public ResultMsg findAllNotice(){
-        return new ResultMsg("SUCCESS",noticeDao.findAllNotice());
+        return ResultMsg.success(noticeDao.findAllNotice());
     }
 }

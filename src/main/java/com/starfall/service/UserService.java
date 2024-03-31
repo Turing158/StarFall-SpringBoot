@@ -22,7 +22,6 @@ public class UserService {
     @Autowired
     MailUtil mailUtil;
     public ResultMsg login(HttpSession session,String account, String password,String code) {
-        ResultMsg resultMsg = new ResultMsg();
         String sessionCode = (String) session.getAttribute("code");
         System.out.println(session.getId());
         if(sessionCode.equals(code)){
@@ -30,25 +29,21 @@ public class UserService {
             boolean flag = account.matches(match);
             if(flag){
                 if(userDao.existUser(account) == 1){
-                    return loginSuccess(account, password, resultMsg);
+                    return loginSuccess(account, password);
                 }
-                resultMsg.setMsg("EMAIL_ERROR");
-                return resultMsg;
+                return ResultMsg.error("EMAIL_ERROR");
             }
             if(userDao.existUser(account) == 1){
-                return loginSuccess(account, password, resultMsg);
+                return loginSuccess(account, password);
             }
-            resultMsg.setMsg("USER_ERROR");
-            return resultMsg;
+            return ResultMsg.error("USER_ERROR");
         }
-        resultMsg.setMsg("CODE_ERROR");
-        return resultMsg;
+        return ResultMsg.error("CODE_ERROR");
     }
 
-    private ResultMsg loginSuccess(String account, String password, ResultMsg resultMsg){
+    private ResultMsg loginSuccess(String account, String password){
         User user = userDao.findByUserOrEmail(account);
         if(user.getPassword().equals(aecSecure.encrypt(password))){
-            resultMsg.setMsg("SUCCESS");
             UserOut userOut = new UserOut(
                     user.getUser(),
                     user.getName(),
@@ -59,15 +54,12 @@ public class UserService {
                     user.getLevel(),
                     user.getAvatar()
             );
-            resultMsg.setObject(userOut);
-            return resultMsg;
+            return ResultMsg.success(userOut);
         }
-        resultMsg.setMsg("PASSWORD_ERROR");
-        return resultMsg;
+        return ResultMsg.error("PASSWORD_ERROR");
     }
 
     public ResultMsg register(HttpSession session,String user, String password, String email,String emailCode,String code){
-        ResultMsg resultMsg = new ResultMsg();
         if(userDao.existUser(user) == 0){
             if(userDao.existEmail(email) == 0){
                 String emailCodeSession = (String) session.getAttribute("emailCode");
@@ -78,40 +70,32 @@ public class UserService {
                     String name = "新用户"+ldt.getYear() + ldt.getMonthValue() + ldt.getDayOfMonth();
                     User userObj = new User(user, aecSecure.encrypt(password), name, 0,email, date, 0, 1,"",null);
                     userDao.insertUser(userObj);
-                    resultMsg.setMsg("SUCCESS");
-                    return resultMsg;
+                    return ResultMsg.success();
                 }
-                resultMsg.setMsg("EMAIL_CODE_ERROR");
-                return resultMsg;
+                return ResultMsg.error("EMAIL_CODE_ERROR");
             }
-            resultMsg.setMsg("EMAIL_ERROR");
-            return resultMsg;
+            return ResultMsg.error("EMAIL_ERROR");
         }
-        resultMsg.setMsg("USER_ERROR");
-        return resultMsg;
+        return ResultMsg.error("USER_ERROR");
     }
     public ResultMsg getEmailCode(HttpSession session, String email){
-        ResultMsg resultMsg = new ResultMsg();
         int status = userDao.existEmail(email);
         if(status == 0){
             String code = CodeUtil.getCode(6);
             mailUtil.reg_mail(email,code);
             session.setAttribute("emailCode",code.toUpperCase());
-            resultMsg.setMsg("SUCCESS");
-            return resultMsg;
+            return ResultMsg.success();
         }
-        resultMsg.setMsg("EMAIL_ERROR");
-        return resultMsg;
+        return ResultMsg.error("EMAIL_ERROR");
     }
 
     public ResultMsg settingInfo(HttpSession session,String user,String name,int gender,String birthday,String code){
-        ResultMsg resultMsg = new ResultMsg();
         String codeSession = (String) session.getAttribute("code");
         if(codeSession.equals(code)){
             int status = userDao.updateInfo(user,name,gender,birthday);
             if(status == 1){
                 User userObj = userDao.findByUserOrEmail(user);
-                resultMsg.setObject(new UserOut(
+                UserOut userOut = new UserOut(
                         userObj.getUser(),
                         userObj.getName(),
                         userObj.getGender(),
@@ -120,20 +104,16 @@ public class UserService {
                         userObj.getExp(),
                         userObj.getLevel(),
                         userObj.getAvatar()
-                ));
-                resultMsg.setMsg("SUCCESS");
-                return resultMsg;
+                );
+                return ResultMsg.success(userOut);
             }
-            resultMsg.setMsg("DATASOURCE_ERROR");
-            return resultMsg;
+            return ResultMsg.error("DATASOURCE_ERROR");
         }
-        resultMsg.setMsg("CODE_ERROR");
-        return resultMsg;
+        return ResultMsg.error("CODE_ERROR");
     }
 
 
     public ResultMsg settingPassword(HttpSession session,String user,String oldPassword,String newPassword,String code){
-        ResultMsg resultMsg = new ResultMsg();
         String codeSession = (String) session.getAttribute("code");
         if(codeSession.equals(code)){
             User userObj = userDao.findByUserOrEmail(user);
@@ -142,31 +122,23 @@ public class UserService {
                 String encryptNewPassword = aecSecure.encrypt(newPassword);
                 int status = userDao.updatePassword(user,encryptNewPassword);
                 if(status == 1){
-                    resultMsg.setMsg("SUCCESS");
-                    return resultMsg;
+                    return ResultMsg.success();
                 }
-                resultMsg.setMsg("DATASOURCE_ERROR");
-                return resultMsg;
+                return ResultMsg.error("DATASOURCE_ERROR");
             }
-            resultMsg.setMsg("PASSWORD_ERROR");
-            return resultMsg;
+            return ResultMsg.error("PASSWORD_ERROR");
         }
-        resultMsg.setMsg("CODE_ERROR");
-        return resultMsg;
+        return ResultMsg.error("CODE_ERROR");
     }
 
 
     public ResultMsg findUserByUser(String user){
-        ResultMsg resultMsg = new ResultMsg();
         UserOut userObj = userDao.findByUser(user);
         if(userObj != null){
             userObj.orderMaxExp();
-            resultMsg.setObject(userObj);
-            resultMsg.setMsg("SUCCESS");
-            return resultMsg;
+            return ResultMsg.success(userObj);
         }
-        resultMsg.setMsg("USER_ERROR");
-        return resultMsg;
+        return ResultMsg.error("USER_ERROR");
     }
 
     public User findUserObjByUser(String user){
