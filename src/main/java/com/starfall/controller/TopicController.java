@@ -1,10 +1,14 @@
 package com.starfall.controller;
 
 import com.starfall.entity.ResultMsg;
+import com.starfall.entity.TopicIn;
+import com.starfall.entity.TopicOut;
 import com.starfall.service.NoticeService;
 import com.starfall.service.TopicService;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -51,5 +55,23 @@ public class TopicController {
     public ResultMsg findTopicLabel(int id,int page ){
         return topicService.findCommentByTopicId(id,page);
     }
+
+
+    @PostMapping("/appendComment")
+    public ResultMsg appendComment(HttpSession session, int id, String user, String content,String code){
+        return topicService.appendComment(session,id,user,content,code);
+    }
+
+    @PostMapping("/deleteComment")
+    public ResultMsg deleteComment(int id,String user,String date){
+        return topicService.deleteComment(id, user, date);
+    }
+
+    @PostMapping("/appendTopic")
+    public ResultMsg appendTopic(HttpSession session, @RequestBody TopicIn topicin){
+        return topicService.appendTopic(session,topicin);
+
+    }
+
 
 }

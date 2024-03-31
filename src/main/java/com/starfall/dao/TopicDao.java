@@ -10,6 +10,8 @@ import java.util.List;
 @Mapper
 public interface TopicDao {
 
+    @Select("select * from starfall.topic order by id desc")
+    List<Topic> findAll();
     @Select("select * from starfall.topic t join starfall.user u on t.user = u.user order by date desc limit #{num},10")
     List<Topic> findAllTopic(int num);
 
@@ -61,9 +63,19 @@ public interface TopicDao {
     @Insert("insert into starfall.likelog value (#{id},#{user},#{state},#{date})")
     int insertLike(int id,String user,int state,String date);
 
-    @Select("select count(*) from starfall.comment where topicid = #{id}")
+    @Select("select count(*) from starfall.comment where topicId = #{id}")
     int findCommentCountByTopicId(int id);
 
-    @Insert("insert into starfall.comment (topicid,user,date,content) values (#{topicid},#{user},#{date},#{content})")
-    int insertComment(int topicid,String user,String date,String content);
+    @Insert("insert into starfall.comment (topicId,user,date,content) values (#{topicId},#{user},#{date},#{content})")
+    int insertComment(int topicId,String user,String date,String content);
+
+
+    @Delete("delete from starfall.comment where topicid = #{topicid} and user = #{user} and date = #{date}")
+    int deleteComment(int topicid,String user,String date);
+
+    @Insert("insert into starfall.topic values (#{id},#{title},#{label},#{user},#{date},0,0,#{version})")
+    int insertTopic(int id,String title,String label,String user,String date,String version);
+
+    @Insert("insert into starfall.topicitem values (#{topicId},#{subtitle},#{subtitleEn},#{source},#{author},#{language},#{address},#{download},#{content})")
+    int insertTopicItem(int topicId,String subtitle,String subtitleEn,String source,String author,String language,String address,String download,String content);
 }

@@ -1,9 +1,8 @@
 package com.starfall.service;
 
 import com.starfall.dao.TopicDao;
-import com.starfall.entity.LikeLog;
-import com.starfall.entity.ResultMsg;
-import com.starfall.entity.Topic;
+import com.starfall.entity.*;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -75,7 +74,6 @@ public class TopicService {
     public ResultMsg getLike(int topicId,String user) {
         ResultMsg resultMsg = new ResultMsg();
         LikeLog like = topicDao.findLikeByTopicAndUser(topicId,user);
-        System.out.println(like);
         if(like != null && like.getStatus() == 1){
             resultMsg.setNum(topicDao.findLikeTotalByTopic(topicId));
             resultMsg.setMsg("IS_LIKE");
@@ -94,13 +92,12 @@ public class TopicService {
         LocalDateTime LDT = LocalDateTime.now();
         String date = LDT.getYear() + "-" + LDT.getMonthValue() + "-" + LDT.getDayOfMonth() + " " + LDT.getHour() + ":" + LDT.getMinute() + ":" + LDT.getSecond();
         LikeLog likeObj = topicDao.findLikeByTopicAndUser(topicId,user);
-        if(like == 1){
-            resultMsg.setNum(topicDao.findLikeTotalByTopic(topicId));
-        }
         if(likeObj != null){
-            System.out.println(likeObj.getStatus());
             if(likeObj.getStatus() != like){
                 topicDao.updateLikeStateByTopicAndUser(topicId,user,like,date);
+                if(like == 1){
+                    resultMsg.setNum(topicDao.findLikeTotalByTopic(topicId));
+                }
                 resultMsg.setMsg("UPDATE_LIKE");
                 return resultMsg;
             }
@@ -109,6 +106,9 @@ public class TopicService {
             return resultMsg;
         }
         topicDao.insertLike(topicId,user,like,date);
+        if(like == 1){
+            resultMsg.setNum(topicDao.findLikeTotalByTopic(topicId));
+        }
         resultMsg.setMsg("LIKE_SUCCESS");
         return resultMsg;
     }
@@ -123,6 +123,62 @@ public class TopicService {
     }
 
 
+    public ResultMsg appendComment(HttpSession session, int topicId, String user, String content, String code){
+        ResultMsg resultMsg = new ResultMsg();
+        String codeSession = (String) session.getAttribute("code");
+        if(codeSession.equals(code)){
+            LocalDateTime LDT = LocalDateTime.now();
+            String date = LDT.getYear() + "-" + LDT.getMonthValue() + "-" + LDT.getDayOfMonth() + " " + LDT.getHour() + ":" + LDT.getMinute() + ":" + LDT.getSecond();
+            topicDao.insertComment(topicId,user,date,content);
+            resultMsg.setNum(topicDao.findCommentCountByTopicId(topicId));
+            resultMsg.setMsg("SUCCESS");
+            return resultMsg;
+        }
+        resultMsg.setMsg("CODE_ERROR");
+        return resultMsg;
+    }
+
+
+    public ResultMsg deleteComment(int id,String user,String date){
+        ResultMsg resultMsg = new ResultMsg();
+        topicDao.deleteComment(id,user,date);
+        resultMsg.setMsg("SUCCESS");
+        return resultMsg;
+    }
+
+
+    public ResultMsg appendTopic(HttpSession session, TopicIn topicIn){
+        ResultMsg resultMsg = new ResultMsg();
+        String codeSession = (String) session.getAttribute("code");
+        if(codeSession.equals(topicIn.getCode())){
+            int id = topicDao.findAll().get(0).getId() + 1;
+            LocalDateTime LDT = LocalDateTime.now();
+            String date = LDT.getYear() + "-" + LDT.getMonthValue() + "-" + LDT.getDayOfMonth() + " " + LDT.getHour() + ":" + LDT.getMinute() + ":" + LDT.getSecond();
+            topicDao.insertTopic(
+                    id,
+                    topicIn.getTitle(),
+                    topicIn.getLabel(),
+                    topicIn.getUser(),
+                    date,
+                    topicIn.getVersion()
+            );
+            topicDao.insertTopicItem(
+                    id,
+                    topicIn.getTopicTitle(),
+                    topicIn.getEnTitle(),
+                    topicIn.getSource(),
+                    topicIn.getAuthor(),
+                    topicIn.getLanguage(),
+                    topicIn.getAddress(),
+                    topicIn.getDownload(),
+                    topicIn.getContent()
+            );
+            resultMsg.setMsg("SUCCESS");
+            return resultMsg;
+        }
+        resultMsg.setMsg("CODE_ERROR");
+        return resultMsg;
+    }
 
 
 }
