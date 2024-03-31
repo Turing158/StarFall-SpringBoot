@@ -3,6 +3,7 @@ package com.starfall.service;
 import com.starfall.dao.TopicDao;
 import com.starfall.entity.*;
 import jakarta.servlet.http.HttpSession;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -10,6 +11,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
+@Slf4j
 public class TopicService {
 
     @Autowired

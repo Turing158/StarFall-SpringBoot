@@ -17,16 +17,16 @@ public class ResultMsg {
     }
 
     public static ResultMsg success() {
-        return new ResultMsg("success",null);
+        return new ResultMsg("SUCCESS",null);
     }
     public static ResultMsg success(int num) {
-        return new ResultMsg("success",null,num);
+        return new ResultMsg("SUCCESS",null,num);
     }
     public static ResultMsg success(Object object) {
-        return new ResultMsg("success",object);
+        return new ResultMsg("SUCCESS",object);
     }
     public static ResultMsg success(Object object,int num) {
-        return new ResultMsg("success",object,num);
+        return new ResultMsg("SUCCESS",object,num);
     }
     public static ResultMsg warning(String msg) {
         return new ResultMsg(msg,null);
@@ -41,6 +41,6 @@ public class ResultMsg {
         return new ResultMsg(msg,object,num);
     }
     public static ResultMsg error(String msg) {
-        return new ResultMsg(msg,null);
+        return new ResultMsg(msg,"ERROR_ERROR",-1);
     }
 }
