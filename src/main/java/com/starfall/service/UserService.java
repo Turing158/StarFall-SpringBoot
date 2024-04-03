@@ -6,12 +6,16 @@ import com.starfall.entity.User;
 import com.starfall.entity.UserOut;
 import com.starfall.util.AECSecure;
 import com.starfall.util.CodeUtil;
+import com.starfall.util.JwtUtil;
 import com.starfall.util.MailUtil;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 public class UserService {
@@ -44,21 +48,40 @@ public class UserService {
     private ResultMsg loginSuccess(String account, String password){
         User user = userDao.findByUserOrEmail(account);
         if(user.getPassword().equals(aecSecure.encrypt(password))){
-            UserOut userOut = new UserOut(
-                    user.getUser(),
-                    user.getName(),
-                    user.getGender(),
-                    user.getEmail(),
-                    user.getBirthday(),
-                    user.getExp(),
-                    user.getLevel(),
-                    user.getAvatar()
-            );
-            return ResultMsg.success(userOut);
+
+            Map<String,Object> claims = new HashMap<>();
+            claims.put("USER",user.getUser());
+            claims.put("EMAIL",user.getEmail());
+            String token = JwtUtil.generateJwt(claims);
+            return ResultMsg.success(token);
         }
         return ResultMsg.error("PASSWORD_ERROR");
     }
 
+
+    public ResultMsg getUserInfo(String token){
+        Claims claims = JwtUtil.parseJWT(token);
+        String user = (String) claims.get("USER");
+        User userObj = userDao.findByUserOrEmail(user);
+        UserOut userOut = new UserOut(
+                userObj.getUser(),
+                userObj.getName(),
+                userObj.getGender(),
+                userObj.getEmail(),
+                userObj.getBirthday(),
+                userObj.getExp(),
+                userObj.getLevel(),
+                userObj.getAvatar()
+        );
+        return ResultMsg.success(userOut);
+    }
+
+
+
+    public ResultMsg logout(HttpSession session){
+        session.invalidate();
+        return ResultMsg.success();
+    }
     public ResultMsg register(HttpSession session,String user, String password, String email,String emailCode,String code){
         if(userDao.existUser(user) == 0){
             if(userDao.existEmail(email) == 0){
@@ -89,9 +112,11 @@ public class UserService {
         return ResultMsg.error("EMAIL_ERROR");
     }
 
-    public ResultMsg settingInfo(HttpSession session,String user,String name,int gender,String birthday,String code){
+    public ResultMsg settingInfo(HttpSession session,String token,String name,int gender,String birthday,String code){
         String codeSession = (String) session.getAttribute("code");
         if(codeSession.equals(code)){
+            Claims claims = JwtUtil.parseJWT(token);
+            String user = (String) claims.get("USER");
             int status = userDao.updateInfo(user,name,gender,birthday);
             if(status == 1){
                 User userObj = userDao.findByUserOrEmail(user);
@@ -113,9 +138,11 @@ public class UserService {
     }
 
 
-    public ResultMsg settingPassword(HttpSession session,String user,String oldPassword,String newPassword,String code){
+    public ResultMsg settingPassword(HttpSession session,String token,String oldPassword,String newPassword,String code){
         String codeSession = (String) session.getAttribute("code");
         if(codeSession.equals(code)){
+            Claims claims = JwtUtil.parseJWT(token);
+            String user = (String) claims.get("USER");
             User userObj = userDao.findByUserOrEmail(user);
             String encryptOldPassword = aecSecure.encrypt(oldPassword);
             if(userObj.getPassword().equals(encryptOldPassword)){

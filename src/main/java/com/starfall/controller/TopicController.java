@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -40,13 +41,13 @@ public class TopicController {
     }
 
     @PostMapping("/getLike")
-    public ResultMsg getLike(int id,String user){
-        return topicService.getLike(id,user);
+    public ResultMsg getLike(int id, @RequestHeader("Authorization")String token){
+        return topicService.getLike(id,token);
     }
 
     @PostMapping("/like")
-    public ResultMsg likeOrDisLike(int id,String user,int like){
-        return topicService.like(id,user,like);
+    public ResultMsg likeOrDisLike(int id,int like,@RequestHeader("Authorization")String token){
+        return topicService.like(id,token,like);
     }
 
 
@@ -58,20 +59,37 @@ public class TopicController {
 
 
     @PostMapping("/appendComment")
-    public ResultMsg appendComment(HttpSession session, int id, String user, String content,String code){
-        return topicService.appendComment(session,id,user,content,code);
+    public ResultMsg appendComment(HttpSession session, int id, @RequestHeader("Authorization")String token, String content,String code){
+        return topicService.appendComment(session,id,token,content,code);
     }
 
     @PostMapping("/deleteComment")
-    public ResultMsg deleteComment(int id,String user,String date){
-        return topicService.deleteComment(id, user, date);
+    public ResultMsg deleteComment(int id,@RequestHeader("Authorization")String token,String date){
+        return topicService.deleteComment(id, token, date);
     }
 
     @PostMapping("/appendTopic")
-    public ResultMsg appendTopic(HttpSession session, @RequestBody TopicIn topicin){
-        return topicService.appendTopic(session,topicin);
+    public ResultMsg appendTopic(HttpSession session,@RequestHeader("Authorization")String token, @RequestBody TopicIn topicin){
+        return topicService.appendTopic(session,token,topicin);
 
     }
 
+    @PostMapping("/isPromiseToEdit")
+    public ResultMsg isPromiseToEdit(@RequestHeader("Authorization") String token,int id){
+        System.out.println(id);
+        return topicService.isPromiseToEditTopic(token,id);
+    }
+
+
+    @PostMapping("/hasToPromiseToEdit")
+    public ResultMsg hasToPromiseToEdit(@RequestHeader("Authorization") String token,int id){
+        return topicService.findTopicInfoToEdit(token,id);
+    }
+
+
+    @PostMapping("/editTopic")
+    public ResultMsg editTopic(HttpSession session,@RequestHeader("Authorization")String token, @RequestBody TopicIn topicin){
+        return topicService.updateTopic(session,token,topicin);
+    }
 
 }

@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TopicIn {
+    int id;
     String title;
     String label;
     String topicTitle;
@@ -20,6 +21,5 @@ public class TopicIn {
     String address;
     String download;
     String content;
-    String user;
     String code;
 }

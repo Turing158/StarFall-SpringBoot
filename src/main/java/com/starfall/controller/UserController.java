@@ -3,11 +3,14 @@ package com.starfall.controller;
 import com.starfall.entity.ResultMsg;
 import com.starfall.service.UserService;
 import jakarta.servlet.http.HttpSession;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@Slf4j
 public class UserController {
 
 
@@ -18,9 +21,13 @@ public class UserController {
         return userService.login(session,account,password,code);
     }
 
+    @PostMapping("/getUserInfo")
+    public ResultMsg getUserInfo(@RequestHeader("Authorization") String token){
+        return userService.getUserInfo(token);
+    }
+
     @PostMapping("/register")
     public ResultMsg register(HttpSession session,String user, String password,String email, String emailCode,String code){
-        System.out.println(user);
         return userService.register(session,user,password,email,emailCode,code);
     }
     @PostMapping("/getEmailCode")
@@ -36,13 +43,13 @@ public class UserController {
 
 
     @PostMapping("/updateUserInfo")
-    public ResultMsg settingInfo(HttpSession session,String user,String name,int gender,String birthday,String code){
-        return userService.settingInfo(session,user,name,gender,birthday,code);
+    public ResultMsg settingInfo(HttpSession session,@RequestHeader("Authorization") String token,String name,int gender,String birthday,String code){
+        return userService.settingInfo(session,token,name,gender,birthday,code);
     }
 
 
     @PostMapping("/updatePassword")
-    public ResultMsg updatePassword(HttpSession session,String user,String oldPassword,String newPassword,String code){
-        return userService.settingPassword(session,user,oldPassword,newPassword,code);
+    public ResultMsg updatePassword(HttpSession session,@RequestHeader("Authorization") String token,String oldPassword,String newPassword,String code){
+        return userService.settingPassword(session,token,oldPassword,newPassword,code);
     }
 }

@@ -1,7 +1,10 @@
 package com.starfall.service;
 
 import com.starfall.dao.TopicDao;
+import com.starfall.dao.UserDao;
 import com.starfall.entity.*;
+import com.starfall.util.JwtUtil;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +19,9 @@ public class TopicService {
 
     @Autowired
     TopicDao topicDao;
+
+    @Autowired
+    UserDao userDao;
 
     public ResultMsg findAllTopic(int page,String label,String version){
         List<Topic> list = null;
@@ -58,7 +64,9 @@ public class TopicService {
         return ResultMsg.success(topicDao.findTopicVersion());
     }
 
-    public ResultMsg getLike(int topicId,String user) {
+    public ResultMsg getLike(int topicId,String token) {
+        Claims claims = JwtUtil.parseJWT(token);
+        String user = (String) claims.get("USER");
         LikeLog like = topicDao.findLikeByTopicAndUser(topicId,user);
         if(like != null && like.getStatus() == 1){
             return ResultMsg.warning("IS_LIKE",topicDao.findLikeTotalByTopic(topicId));
@@ -69,7 +77,9 @@ public class TopicService {
         return ResultMsg.error("NOT_LIKE");
     }
 
-    public ResultMsg like(int topicId,String user,int like){
+    public ResultMsg like(int topicId,String token,int like){
+        Claims claims = JwtUtil.parseJWT(token);
+        String user = (String) claims.get("USER");
         LocalDateTime LDT = LocalDateTime.now();
         String date = LDT.getYear() + "-" + LDT.getMonthValue() + "-" + LDT.getDayOfMonth() + " " + LDT.getHour() + ":" + LDT.getMinute() + ":" + LDT.getSecond();
         LikeLog likeObj = topicDao.findLikeByTopicAndUser(topicId,user);
@@ -97,7 +107,9 @@ public class TopicService {
     }
 
 
-    public ResultMsg appendComment(HttpSession session, int topicId, String user, String content, String code){
+    public ResultMsg appendComment(HttpSession session, int topicId, String token, String content, String code){
+        Claims claims = JwtUtil.parseJWT(token);
+        String user = (String) claims.get("USER");
         String codeSession = (String) session.getAttribute("code");
         if(codeSession.equals(code)){
             LocalDateTime LDT = LocalDateTime.now();
@@ -109,13 +121,21 @@ public class TopicService {
     }
 
 
-    public ResultMsg deleteComment(int id,String user,String date){
+    public ResultMsg deleteComment(int id,String token,String date){
+        Claims claims = JwtUtil.parseJWT(token);
+        String user = (String) claims.get("USER");
         topicDao.deleteComment(id,user,date);
         return ResultMsg.success();
     }
 
 
-    public ResultMsg appendTopic(HttpSession session, TopicIn topicIn){
+    public ResultMsg appendTopic(HttpSession session,String token, TopicIn topicIn){
+        Claims claims = JwtUtil.parseJWT(token);
+        String user = (String) claims.get("USER");
+        int level = userDao.findByUserOrEmail(user).getLevel();
+        if(level < 5){
+            return ResultMsg.error("LEVEL_ERROR");
+        }
         String codeSession = (String) session.getAttribute("code");
         if(codeSession.equals(topicIn.getCode())){
             int id = topicDao.findAll().get(0).getId() + 1;
@@ -125,7 +145,7 @@ public class TopicService {
                     id,
                     topicIn.getTitle(),
                     topicIn.getLabel(),
-                    topicIn.getUser(),
+                    user,
                     date,
                     topicIn.getVersion()
             );
@@ -140,10 +160,75 @@ public class TopicService {
                     topicIn.getDownload(),
                     topicIn.getContent()
             );
-            return ResultMsg.success();
+            return ResultMsg.success(id);
         }
         return ResultMsg.error("CODE_ERROR");
     }
 
+    public ResultMsg isPromiseToEditTopic(String token,int id){
+        Claims claims = JwtUtil.parseJWT(token);
+        String user = (String) claims.get("USER");
+        String topicUser = topicDao.findTopicUserBId(id);
+        if(user.equals(topicUser)){
+            return ResultMsg.success();
+        }
+        return ResultMsg.error("REJECT");
+    }
+
+
+    public ResultMsg findTopicInfoToEdit(String token,int id){
+        ResultMsg r = isPromiseToEditTopic(token,id);
+        if(r.getMsg().equals("REJECT")){
+            return r;
+        }
+        TopicOut topicOut = topicDao.findTopicInfoById(id);
+        if(topicOut == null){
+            return ResultMsg.error("NULL_ERROR");
+        }
+        return ResultMsg.success(topicOut);
+    }
+
+
+    public ResultMsg updateTopic(HttpSession session,String token,TopicIn topicIn){
+        Claims claims = JwtUtil.parseJWT(token);
+        String user = (String) claims.get("USER");
+        ResultMsg r = isPromiseToEditTopic(token,topicIn.getId());
+        if(r.getMsg().equals("REJECT")){
+            return r;
+        }
+        String codeSession = (String) session.getAttribute("code");
+        if(codeSession.equals(topicIn.getCode())){
+            LocalDateTime LDT = LocalDateTime.now();
+            String date = LDT.getYear() + "-" + LDT.getMonthValue() + "-" + LDT.getDayOfMonth() + " " + LDT.getHour() + ":" + LDT.getMinute() + ":" + LDT.getSecond();
+            TopicOut topicOut = topicDao.findTopicInfoById(topicIn.getId());
+            Topic topic = new Topic(
+                    topicIn.getId(),
+                    topicIn.getTitle(),
+                    topicIn.getLabel(),
+                    user,
+                    null,
+                    null,
+                    date,
+                    topicOut.getView(),
+                    topicOut.getComment(),
+                    topicIn.getVersion()
+            );
+            TopicItem topicItem = new TopicItem(
+                    topicIn.getId(),
+                    topicIn.getTopicTitle(),
+                    topicIn.getEnTitle(),
+                    topicIn.getSource(),
+                    topicIn.getAuthor(),
+                    topicIn.getLanguage(),
+                    topicIn.getAddress(),
+                    topicIn.getDownload(),
+                    topicIn.getContent()
+            );
+            int status1 = topicDao.updateTopicExpectCommentAndView(topic);
+            int status2 = topicDao.updateTopicItem(topicItem);
+            return (status1+status2) == 2 ? ResultMsg.success() : ResultMsg.error("UPDATE_ERROR");
+        }
+        return ResultMsg.error("CODE_ERROR");
+    }
 
 }
