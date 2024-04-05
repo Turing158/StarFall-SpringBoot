@@ -80,7 +80,7 @@ public interface TopicDao {
     @Update("update starfall.topic set title = #{title},label = #{label},date = #{date},version = #{version} where id = #{id}")
     int updateTopicExpectCommentAndView(Topic topic);
 
-    @Update("update starfall.topicitem set topicTitle = #{topicTitle},enTitle = #{enTitle},source = #{source},author = #{author},language = #{language},address = #{address},download = #{download},content = #{content}")
+    @Update("update starfall.topicitem set topicTitle = #{topicTitle},enTitle = #{enTitle},source = #{source},author = #{author},language = #{language},address = #{address},download = #{download},content = #{content} where topicId = #{topicId}")
     int updateTopicItem(TopicItem topicItem);
 
     @Delete("delete from starfall.comment where topicid = #{topicid} and user = #{user} and date = #{date}")

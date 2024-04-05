@@ -4,10 +4,7 @@ import com.starfall.dao.UserDao;
 import com.starfall.entity.ResultMsg;
 import com.starfall.entity.User;
 import com.starfall.entity.UserOut;
-import com.starfall.util.AECSecure;
-import com.starfall.util.CodeUtil;
-import com.starfall.util.JwtUtil;
-import com.starfall.util.MailUtil;
+import com.starfall.util.*;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -166,6 +163,15 @@ public class UserService {
             return ResultMsg.success(userObj);
         }
         return ResultMsg.error("USER_ERROR");
+    }
+    public ResultMsg exit(HttpSession session,String token){
+        try {
+            JwtUtil.parseJWT(token);
+        } catch (Exception e) {
+            return ResultMsg.error("NO_TOKEN");
+        }
+        session.invalidate();
+        return ResultMsg.success();
     }
 
     public User findUserObjByUser(String user){

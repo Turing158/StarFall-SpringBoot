@@ -52,4 +52,9 @@ public class UserController {
     public ResultMsg updatePassword(HttpSession session,@RequestHeader("Authorization") String token,String oldPassword,String newPassword,String code){
         return userService.settingPassword(session,token,oldPassword,newPassword,code);
     }
+
+    @PostMapping
+    public ResultMsg exit(HttpSession session,@RequestHeader("Authorization") String token){
+        return userService.exit(session,token);
+    }
 }
