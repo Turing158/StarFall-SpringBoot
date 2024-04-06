@@ -8,6 +8,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -19,26 +20,20 @@ import java.io.IOException;
 @Slf4j
 @Component
 public class JWTAuthenticationFilter extends OncePerRequestFilter {
+
+    @Value("${direct.access.url}")
+    String[] directAccessUrl = {};
+
     @Override
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse resp, FilterChain filterChain) throws ServletException, IOException {
 
         String url = req.getRequestURL().toString();
-        if(
-                url.contains("login")
-                || url.contains("register")
-                || url.contains("getCodeImage")
-                || url.contains("getEmailCode")
-                || url.contains("findUserByUser")
-                || url.contains("findAllNotice")
-                || url.contains("findAllTopic")
-                || url.contains("getTopicInfo")
-                || url.contains("findAllTopicByUser")
-                || url.contains("findTopicVersion")
-                || url.contains("findCommentByTopic")
-        ){
-            log.info("公共操作::{}", url);
-            filterChain.doFilter(req, resp);
-            return;
+        for (int i = 0; i < directAccessUrl.length; i++) {
+            if(url.contains(directAccessUrl[i])){
+                log.info("公共操作::{}", url);
+                filterChain.doFilter(req, resp);
+                return;
+            }
         }
         String token = req.getHeader("token");
         if(token == null || token.isEmpty()){
