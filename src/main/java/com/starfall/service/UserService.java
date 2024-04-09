@@ -22,9 +22,10 @@ public class UserService {
     AECSecure aecSecure;
     @Autowired
     MailUtil mailUtil;
+//    @Autowired
+//    WebSocket webSocket;
     public ResultMsg login(HttpSession session,String account, String password,String code) {
         String sessionCode = (String) session.getAttribute("code");
-        System.out.println(session.getId());
         if(sessionCode.equals(code)){
             String match = "\\w*@\\w*";
             boolean flag = account.matches(match);
@@ -173,6 +174,15 @@ public class UserService {
         session.invalidate();
         return ResultMsg.success();
     }
+
+    public ResultMsg sendMessageToUser(String token,String toUser,String msg){
+        Claims claims = JwtUtil.parseJWT(token);
+        String user = (String) claims.get("USER");
+//        webSocket.sendMessageToUser(toUser,msg);
+        return ResultMsg.success();
+    }
+
+
 
     public User findUserObjByUser(String user){
         return userDao.findByUserOrEmail(user);

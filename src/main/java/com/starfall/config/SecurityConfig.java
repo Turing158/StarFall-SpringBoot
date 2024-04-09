@@ -12,6 +12,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
@@ -39,16 +40,17 @@ public class SecurityConfig{
                 // 禁用默认登出页
                 .logout(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests((authorize) -> authorize
+                        .requestMatchers("/message/**").anonymous()
                         .requestMatchers(directAccessUrl).anonymous()
                         .anyRequest().authenticated())
                 // 自定义的过滤器
+
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(exceptionHandling -> exceptionHandling
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler));
         return http.build();
     }
-
 
 
 

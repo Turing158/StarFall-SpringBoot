@@ -35,9 +35,14 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
                 return;
             }
         }
+        if (url.startsWith("/ws/")){
+            log.info("WebSocket::{}", url);
+            filterChain.doFilter(req, resp);
+            return;
+        }
         String token = req.getHeader("token");
         if(token == null || token.isEmpty()){
-            log.info("token为空，未登录");
+            log.info("token为空，未登录，拒绝访问：{}",url);
             resp.setCharacterEncoding("UTF-8");
             resp.setContentType("application/json; charset=UTF-8");
             resp.getWriter().write(JsonOperate.toJson(ResultMsg.error("NOT_LOGIN","未登录,请先登录")));
@@ -46,7 +51,7 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
             try {
                 JwtUtil.parseJWT(token);
             } catch (Exception e) {
-                log.info("token解析失败，未登录");
+                log.info("token解析失败，未登录,拒绝访问：{}",url);
                 resp.setCharacterEncoding("UTF-8");
                 resp.setContentType("application/json; charset=UTF-8");
                 resp.getWriter().write(JsonOperate.toJson(ResultMsg.error("NOT_LOGIN","未登录,请先登录")));
