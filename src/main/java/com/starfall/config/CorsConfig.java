@@ -19,6 +19,7 @@ public class CorsConfig {
         corsConfiguration.addAllowedMethod("*");
         corsConfiguration.addAllowedOrigin("http://" +vueUrl);
         corsConfiguration.setAllowCredentials(true);
+        corsConfiguration.addExposedHeader("*");
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**",corsConfiguration);
         return new CorsFilter(source);

@@ -44,7 +44,6 @@ public class SecurityConfig{
                         .requestMatchers(directAccessUrl).anonymous()
                         .anyRequest().authenticated())
                 // 自定义的过滤器
-
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(exceptionHandling -> exceptionHandling
                         .authenticationEntryPoint(authenticationEntryPoint)

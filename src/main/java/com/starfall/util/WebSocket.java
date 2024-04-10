@@ -1,11 +1,13 @@
 package com.starfall.util;
 
 import com.starfall.config.WebSocketConfig;
+import io.jsonwebtoken.Claims;
 import jakarta.websocket.*;
 import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.RequestHeader;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -20,8 +22,9 @@ public class WebSocket {
     private static ConcurrentHashMap<String,Session> sessionMap = new ConcurrentHashMap<>();
 
     @OnOpen
-    public void onOpen(Session session, @PathParam("user") String user) {
-        System.out.println(user);
+    public void onOpen(Session session, @PathParam("user") String token) {
+        Claims claims = JwtUtil.parseJWT(token);
+        String user = (String) claims.get("USER");
         Session sessionObj = sessionMap.get(user);
         if(sessionObj != null){
             log.info("用户{}已经在线",user);

@@ -14,7 +14,7 @@ public class OtherService {
 
 
     public void getCodeImage(HttpSession session, HttpServletResponse resp) throws IOException {
-
+        System.out.println(session.getId());
         ServletOutputStream sos = resp.getOutputStream();
         GifCaptcha g = new GifCaptcha(100,40,4);
         g.createCode();

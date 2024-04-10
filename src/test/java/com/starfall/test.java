@@ -2,6 +2,7 @@ package com.starfall;
 
 import com.starfall.dao.TopicDao;
 import com.starfall.dao.UserDao;
+import com.starfall.entity.User;
 import com.starfall.service.UserService;
 import com.starfall.util.AECSecure;
 import org.junit.Test;
@@ -35,8 +36,12 @@ public class test {
     @Test
     public void testLogin(){
 //        System.out.println(userService.login("admin1", "",""));
-        String password = userDao.findByUserOrEmail("admin").getPassword();
-        System.out.println(aecSecure.decrypt(password));
+//        String password = userDao.findByUserOrEmail("admin").getPassword();
+//        System.out.println(aecSecure.decrypt(password));
+        User user = new User();
+        user.setUser("StarFall");
+        user.setPassword(aecSecure.encrypt("admin"));
+        userDao.insertUser(user);
     }
 
     @Autowired

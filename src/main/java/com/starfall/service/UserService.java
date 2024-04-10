@@ -1,6 +1,7 @@
 package com.starfall.service;
 
 import com.starfall.dao.UserDao;
+import com.starfall.entity.Message;
 import com.starfall.entity.ResultMsg;
 import com.starfall.entity.User;
 import com.starfall.entity.UserOut;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -22,15 +24,12 @@ public class UserService {
     AECSecure aecSecure;
     @Autowired
     MailUtil mailUtil;
-//    @Autowired
-//    WebSocket webSocket;
     public ResultMsg login(HttpSession session,String account, String password,String code) {
         String sessionCode = (String) session.getAttribute("code");
         if(sessionCode.equals(code)){
-            String match = "\\w*@\\w*";
-            boolean flag = account.matches(match);
+            boolean flag = account.contains("@");
             if(flag){
-                if(userDao.existUser(account) == 1){
+                if(userDao.existEmail(account) == 1){
                     return loginSuccess(account, password);
                 }
                 return ResultMsg.error("EMAIL_ERROR");
@@ -46,7 +45,6 @@ public class UserService {
     private ResultMsg loginSuccess(String account, String password){
         User user = userDao.findByUserOrEmail(account);
         if(user.getPassword().equals(aecSecure.encrypt(password))){
-
             Map<String,Object> claims = new HashMap<>();
             claims.put("USER",user.getUser());
             claims.put("EMAIL",user.getEmail());
@@ -175,12 +173,6 @@ public class UserService {
         return ResultMsg.success();
     }
 
-    public ResultMsg sendMessageToUser(String token,String toUser,String msg){
-        Claims claims = JwtUtil.parseJWT(token);
-        String user = (String) claims.get("USER");
-//        webSocket.sendMessageToUser(toUser,msg);
-        return ResultMsg.success();
-    }
 
 
 
