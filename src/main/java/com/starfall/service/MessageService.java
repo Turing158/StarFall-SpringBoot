@@ -47,8 +47,9 @@ public class MessageService {
         User toUserObj= userDao.findByUserOrEmail(fromUser);
         if(fromUserObj != null){
             LocalDateTime now = LocalDateTime.now();
-            String date = now.getYear()+"-"+(now.getMonthValue()+1)+"-"+now.getDayOfMonth()+" "+now.getHour()+":"+now.getMinute()+":"+now.getSecond();
-            webSocket.sendMessageToUser(toUser, JsonOperate.toJson(new Message(fromUser,fromUserObj.getName(),fromUserObj.getAvatar(),toUser,toUserObj.getName(),toUserObj.getAvatar(),date,"Hello,admin")));
+            String date = now.getYear()+"-"+fillZero(now.getMonthValue()+1+"")+"-"+fillZero(now.getDayOfMonth()+"")+" "+fillZero(now.getHour()+"")+":"+fillZero(now.getMinute()+"")+":"+fillZero(now.getSecond()+"");
+            Message message = new Message(fromUser,fromUserObj.getName(),fromUserObj.getAvatar(),toUser,toUserObj.getName(),toUserObj.getAvatar(),date,content);
+            webSocket.sendMessageToUser(toUser, JsonOperate.toJson(message));
             List<Message> fromUserMsgs = messageDao.findFromUserMsgByFromUserAndToUser(fromUser,toUser);
             if(fromUserMsgs.isEmpty()){
 //                直接保存新数据
@@ -62,16 +63,24 @@ public class MessageService {
                 if(oldDateTime.plusMinutes(1).isAfter(newDateTime)){
 //                    更新
                     String newContent = fromUserMsg.getContent()+"[&divide&]"+content;
-                    messageDao.updateMsgContent(fromUser,toUser,newContent,oldDateTimeStr);
+                    messageDao.updateMsgContent(fromUser,toUser,oldDateTimeStr,newContent);
                 }
                 else{
 //                    直接保存新数据
                     messageDao.insertMsg(fromUser,toUser,date,content);
                 }
             }
-            return ResultMsg.success();
+            return ResultMsg.success(message);
         }
         return ResultMsg.error("USER_ERROR");
+    }
+
+
+    public String fillZero(String str){
+        if(str.length() == 1){
+            return "0"+str;
+        }
+        return str;
     }
 
     public ResultMsg testSend(){
