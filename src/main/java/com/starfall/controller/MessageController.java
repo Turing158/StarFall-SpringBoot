@@ -26,6 +26,12 @@ public class MessageController {
     }
 
 
+    @PostMapping("/sendMessage")
+    public ResultMsg sendMessage(@RequestHeader("Authorization") String token,String toUser,String content){
+        return messageService.SendMessage(token,toUser,content);
+    }
+
+
     @GetMapping("/testSend")
     public ResultMsg testSend(){
         return messageService.testSend();

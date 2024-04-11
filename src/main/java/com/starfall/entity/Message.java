@@ -12,6 +12,8 @@ public class Message {
     String fromName;
     String fromAvatar;
     String toUser;
+    String toName;
+    String toAvatar;
     String date;
     String content;
 }
