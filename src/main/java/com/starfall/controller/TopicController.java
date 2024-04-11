@@ -92,4 +92,10 @@ public class TopicController {
         return topicService.updateTopic(session,token,topicin);
     }
 
+
+    @PostMapping("/deleteTopic")
+    public ResultMsg deleteTopic(@RequestHeader("Authorization")String token,int id){
+        return topicService.deleteTopic(token,id);
+    }
+
 }

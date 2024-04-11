@@ -231,4 +231,16 @@ public class TopicService {
         return ResultMsg.error("CODE_ERROR");
     }
 
+    public ResultMsg deleteTopic(String token,int id) {
+        ResultMsg r = isPromiseToEditTopic(token, id);
+        if (r.getMsg().equals("REJECT")) {
+            return r;
+        }
+        int status1 = topicDao.deleteTopicItem(id);
+        int status2 = topicDao.deleteLikeLog(id);
+        int status3 = topicDao.deleteCommentByTopicId(id);
+        int status4 = topicDao.deleteTopic(id);
+        return status1+status2+status3+status4 >= 2 ? ResultMsg.success() : ResultMsg.error("DELETE_ERROR");
+    }
+
 }

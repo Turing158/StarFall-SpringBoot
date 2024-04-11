@@ -86,6 +86,20 @@ public interface TopicDao {
     @Delete("delete from starfall.comment where topicid = #{topicid} and user = #{user} and date = #{date}")
     int deleteComment(int topicid,String user,String date);
 
+    @Delete("delete from starfall.topic where id = #{topicId}")
+    int deleteTopic(int id);
+
+
+    @Delete("delete from starfall.topicitem where topicId = #{topicId}")
+    int deleteTopicItem(int topicId);
+
+
+    @Delete("delete from starfall.likelog where topicId = #{topicId}")
+    int deleteLikeLog(int topicId);
+
+    @Delete("delete from starfall.comment where topicId = #{topicId}")
+    int deleteCommentByTopicId(int topicId);
+
 
 
 
