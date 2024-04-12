@@ -1,17 +1,17 @@
 package com.starfall.service;
 
+import com.starfall.dao.SignInDao;
 import com.starfall.dao.UserDao;
-import com.starfall.entity.Message;
-import com.starfall.entity.ResultMsg;
-import com.starfall.entity.User;
-import com.starfall.entity.UserOut;
+import com.starfall.entity.*;
 import com.starfall.util.*;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,6 +20,8 @@ import java.util.Map;
 public class UserService {
     @Autowired
     UserDao userDao;
+    @Autowired
+    SignInDao signInDao;
     @Autowired
     AECSecure aecSecure;
     @Autowired
@@ -174,6 +176,50 @@ public class UserService {
     }
 
 
+    public ResultMsg findAlreadySignIn(String token,int page){
+        Claims claims = JwtUtil.parseJWT(token);
+        String user = (String) claims.get("USER");
+        List<SignIn> signInList = signInDao.findAllSignInByUser(user,(page-1)*6);
+        int count = 1;
+        if(signInList.size() == 1){
+            count = 1;
+        }
+        else if(signInList.isEmpty()){
+            count = 0;
+        }
+        else{
+            for (int i = 0; i < signInList.size()-1; i++) {
+                LocalDate newDate = LocalDate.parse(signInList.get(i).getDate());
+                LocalDate oldDate = LocalDate.parse(signInList.get(i+1).getDate());
+                if(DateUtil.isContinuityOfDate(oldDate,newDate)){
+                    count++;
+                }
+                else {
+                    break;
+                }
+            }
+        }
+        return ResultMsg.success(signInList,count);
+    }
+    public ResultMsg findSignInCount(String token){
+        Claims claims = JwtUtil.parseJWT(token);
+        String user = (String) claims.get("USER");
+        int count = signInDao.countSignInByUser(user);
+        return ResultMsg.success(count);
+    }
+
+    public ResultMsg signIn(String token,String msg,String emotion){
+        Claims claims = JwtUtil.parseJWT(token);
+        String user = (String) claims.get("USER");
+        LocalDateTime ldt = LocalDateTime.now();
+        String date = ldt.getYear() + "-" + ldt.getMonthValue() + "-" + ldt.getDayOfMonth();
+        SignIn signIn = signInDao.findSignInByUser(user,date);
+        if(signIn == null){
+            signInDao.insertSignIn(user,date,msg,emotion);
+            return ResultMsg.success();
+        }
+        return ResultMsg.error("SIGNIN_ERROR");
+    }
 
 
     public User findUserObjByUser(String user){

@@ -53,7 +53,24 @@ public class UserController {
         return userService.settingPassword(session,token,oldPassword,newPassword,code);
     }
 
-    @PostMapping
+
+
+    @PostMapping("/findAllSignIn")
+    public ResultMsg findAllSignIn(@RequestHeader("Authorization") String token,int page){
+        return userService.findAlreadySignIn(token,page);
+    }
+
+    @PostMapping("/countAllSignIn")
+    public ResultMsg countAllSignIn(@RequestHeader("Authorization") String token){
+        return userService.findSignInCount(token);
+    }
+
+    @PostMapping("/signIn")
+    public ResultMsg signIn(@RequestHeader("Authorization") String token,String msg,String emotion){
+        return userService.signIn(token,msg,emotion);
+    }
+
+    @PostMapping("/exit")
     public ResultMsg exit(HttpSession session,@RequestHeader("Authorization") String token){
         return userService.exit(session,token);
     }
