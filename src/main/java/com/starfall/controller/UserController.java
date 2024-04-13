@@ -54,6 +54,26 @@ public class UserController {
     }
 
 
+    @PostMapping("/updateAvatar")
+    public ResultMsg updateAvatar(@RequestHeader("Authorization") String token,String avatar){
+        return userService.settingAvatar(token,avatar);
+    }
+
+    @PostMapping("/getOldEmailCode")
+    public ResultMsg getOldEmailCode(@RequestHeader("Authorization") String token){
+        return userService.sendOldEmailCode(token);
+    }
+
+    @PostMapping("/getNewEmailCode")
+    public ResultMsg getNewEmailCode(String newEmail){
+        return userService.sendNewEmailCode(newEmail);
+    }
+
+    @PostMapping("/updateEmail")
+    public ResultMsg updateEmail(@RequestHeader("Authorization") String token,String newEmail,String oldEmailCode,String newEmailCode){
+        return userService.settingEmail(token, newEmail, oldEmailCode, newEmailCode);
+    }
+
 
     @PostMapping("/findAllSignIn")
     public ResultMsg findAllSignIn(@RequestHeader("Authorization") String token,int page){

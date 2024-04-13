@@ -46,5 +46,11 @@ public class MailUtil{
         sendMail(mail,title,msg);
     }
 
+    public void custom_mail(String mail,String str,String num) {
+        String title = "StarFall"+str+"验证码";
+        String msg = "您好！\r\n    感谢注册此网站，也感谢你的大力支持\n注意：如您并未忘记密码，请勿轻信任何索要验证码的坏人，验证码10分钟后过期\n<center>↓↓↓↓您的"+str+"验证码↓↓↓↓</center>\n<center style='font-size:40px'>"+num.toUpperCase()+"</center>\n<center>↑↑↑↑您的设置验证码↑↑↑↑</center>";
+        sendMail(mail,title,msg);
+    }
+
 
 }

@@ -28,11 +28,8 @@ public interface UserDao {
     @Update("update starfall.user set exp=#{exp},level = #{level} where user=#{user}")
     int updateExp(String user,int exp,int level);
 
-    @Update("update starfall.user set level=#{level} where user=#{user}")
-    int updateLevel(String user,int level);
-
     @Update("update starfall.user set avatar=#{head} where user=#{user}")
-    int updateHead(String user,String avatar);
+    int updateAvatar(String user,String avatar);
 
     @Update("update starfall.user set name=#{name},gender=#{gender},birthday=#{birthday} where user=#{user}")
     int updateInfo(String user,String name,int gender,String birthday);
@@ -41,6 +38,8 @@ public interface UserDao {
     @Update("update starfall.user set password=#{password} where user=#{user}")
     int updatePassword(String user,String password);
 
+    @Update("update starfall.user set email=#{email} where user=#{user}")
+    int updateEmail(String user,String email);
 
 
 

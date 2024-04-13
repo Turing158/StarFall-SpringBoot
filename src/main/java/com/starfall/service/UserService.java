@@ -7,11 +7,13 @@ import com.starfall.util.*;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class UserService {
@@ -23,6 +25,8 @@ public class UserService {
     AECSecure aecSecure;
     @Autowired
     MailUtil mailUtil;
+    @Autowired
+    StringRedisTemplate stringRedisTemplate;
     public ResultMsg login(HttpSession session,String account, String password,String code) {
         String sessionCode = (String) session.getAttribute("code");
         if(sessionCode.equals(code)){
@@ -153,6 +157,66 @@ public class UserService {
         return ResultMsg.error("CODE_ERROR");
     }
 
+    public ResultMsg settingAvatar(String token,String avatar){
+        Claims claims = JwtUtil.parseJWT(token);
+        String user = (String) claims.get("USER");
+        userDao.updateAvatar(user,avatar);
+        return ResultMsg.error("USER_ERROR");
+    }
+
+    public ResultMsg sendOldEmailCode(String token){
+        Claims claims = JwtUtil.parseJWT(token);
+        String user = (String) claims.get("USER");
+        User userObj = userDao.findByUserOrEmail(user);
+        String code = CodeUtil.getCode(6);
+        stringRedisTemplate.opsForValue().set("oldEmailCode",code.toUpperCase(),10, TimeUnit.MINUTES);
+        mailUtil.custom_mail(userObj.getEmail(),"修改旧邮箱",code.toUpperCase());
+        System.out.println(code);
+        return ResultMsg.success();
+    }
+
+    public ResultMsg sendNewEmailCode(String email){
+        String code = CodeUtil.getCode(6);
+        stringRedisTemplate.opsForValue().set("newEmailCode",code.toUpperCase(),10, TimeUnit.MINUTES);
+        mailUtil.custom_mail(email,"新邮箱",code.toUpperCase());
+        System.out.println(code);
+        return ResultMsg.success();
+    }
+
+    public ResultMsg settingEmail(String token,String newEmail,String oldEmailCode,String newEmailCode){
+        if(Boolean.FALSE.equals(stringRedisTemplate.hasKey("oldEmailCode"))){
+            return ResultMsg.error("OLD_EMAIL_CODE_EXPIRED");
+        }
+        if(Boolean.FALSE.equals(stringRedisTemplate.hasKey("newEmailCode"))){
+            return ResultMsg.error("NEW_EMAIL_CODE_EXPIRED");
+        }
+        String oldEmailCodeSession = stringRedisTemplate.opsForValue().get("oldEmailCode");
+        String newEmailCodeSession = stringRedisTemplate.opsForValue().get("newEmailCode");
+        System.out.println(oldEmailCodeSession);
+        System.out.println(newEmailCodeSession);
+        if(oldEmailCodeSession.equals(oldEmailCode.toUpperCase())){
+            if(newEmailCodeSession.equals(newEmailCode.toUpperCase())){
+                Claims claims = JwtUtil.parseJWT(token);
+                String user = (String) claims.get("USER");
+                if(userDao.existEmail(newEmail) == 0){
+                    int status = userDao.updateEmail(user,newEmail);
+                    if(status == 1){
+                        Map<String,Object> newClaims = new HashMap<>();
+                        newClaims.put("USER",user);
+                        newClaims.put("EMAIL",newEmail);
+                        String newToken = JwtUtil.generateJwt(newClaims);
+                        return ResultMsg.success(newToken);
+                    }
+                    return ResultMsg.error("DATASOURCE_ERROR");
+                }
+                return ResultMsg.error("EMAIL_ERROR");
+            }
+            return ResultMsg.error("NEW_EMAIL_CODE_ERROR");
+        }
+        return ResultMsg.error("OLD_EMAIL_CODE_ERROR");
+    }
+
+
 
     public ResultMsg findUserByUser(String user){
         UserOut userObj = userDao.findByUser(user);
@@ -228,6 +292,7 @@ public class UserService {
         }
         return ResultMsg.error("SIGNIN_ERROR");
     }
+
 
 
     public User findUserObjByUser(String user){
