@@ -3,6 +3,7 @@ package com.starfall.service;
 import com.starfall.dao.MessageDao;
 import com.starfall.dao.UserDao;
 import com.starfall.entity.Message;
+import com.starfall.entity.MessageTerm;
 import com.starfall.entity.ResultMsg;
 import com.starfall.entity.User;
 import com.starfall.util.JsonOperate;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -25,11 +27,56 @@ public class MessageService {
     @Autowired
     WebSocket webSocket;
 
-    public ResultMsg getAllMsgByUser(String token){
+    public ResultMsg getMessageList(String token){
         Claims claims = JwtUtil.parseJWT(token);
         String user = (String) claims.get("USER");
         List<Message> messages = messageDao.findAllMsgByToUser(user);
-        return ResultMsg.success(messages);
+        List<MessageTerm> messageList = new ArrayList<>();
+        for (int i = 0; i < messages.size(); i++) {
+            String[] content = messages.get(i).getContent().split("[&divide&]");
+            String lastContent = content[content.length-1];
+            if(messageList.isEmpty()){
+                messageList = messageListAdd(messageList,messages,i,user,lastContent);
+            }
+            else{
+                boolean flag = true;
+                for (int j = 0; j < messageList.size(); j++) {
+                    if(
+                            messageList.get(j).getUser().equals(messages.get(i).getToUser())
+                                    || messageList.get(j).getUser().equals(messages.get(i).getFromUser())
+                    ){
+                        flag = false;
+                        break;
+                    }
+                }
+                if(flag){
+                    messageList = messageListAdd(messageList,messages,i,user,lastContent);
+                }
+            }
+        }
+        return ResultMsg.success(messageList);
+    }
+
+    public List<MessageTerm> messageListAdd(List<MessageTerm> messageList, List<Message> messages, int i, String user, String lastContent) {
+        MessageTerm messageTerm;
+        if(messages.get(i).getFromUser().equals(user)){
+            messageTerm = new MessageTerm(
+                    messages.get(i).getToUser(),
+                    messages.get(i).getToName(),
+                    messages.get(i).getToAvatar(),
+                    lastContent
+            );
+        }
+        else {
+            messageTerm = new MessageTerm(
+                    messages.get(i).getFromUser(),
+                    messages.get(i).getFromName(),
+                    messages.get(i).getFromAvatar(),
+                    lastContent
+            );
+        }
+        messageList.add(messageTerm);
+        return messageList;
     }
 
 

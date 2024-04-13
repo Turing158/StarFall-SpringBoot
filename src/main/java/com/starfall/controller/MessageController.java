@@ -15,9 +15,9 @@ public class MessageController {
     MessageService messageService;
 
 
-    @PostMapping("/findAllMsgByToUser")
-    public ResultMsg findAllMsgByToUser(@RequestHeader("Authorization") String token){
-        return messageService.getAllMsgByUser(token);
+    @PostMapping("/findMessageList")
+    public ResultMsg findMessageList(@RequestHeader("Authorization") String token){
+        return messageService.getMessageList(token);
     }
 
     @PostMapping("/findMsgByToUserAndFromUser")
