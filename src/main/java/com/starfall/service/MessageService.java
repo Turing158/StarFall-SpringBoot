@@ -33,7 +33,7 @@ public class MessageService {
         List<Message> messages = messageDao.findAllMsgByToUser(user);
         List<MessageTerm> messageList = new ArrayList<>();
         for (int i = 0; i < messages.size(); i++) {
-            String[] content = messages.get(i).getContent().split("[&divide&]");
+            String[] content = messages.get(i).getContent().split("\\[\\&divide\\&\\]");
             String lastContent = content[content.length-1];
             if(messageList.isEmpty()){
                 messageList = messageListAdd(messageList,messages,i,user,lastContent);
