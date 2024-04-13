@@ -11,10 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class UserService {
@@ -216,7 +213,18 @@ public class UserService {
         SignIn signIn = signInDao.findSignInByUser(user,date);
         if(signIn == null){
             signInDao.insertSignIn(user,date,msg,emotion);
-            return ResultMsg.success();
+            Random r = new Random();
+            int addExp = r.nextInt(50)+20;
+            User userObj = userDao.findByUserOrEmail(user);
+            int exp = userObj.getExp() + addExp;
+            int level = userObj.getLevel();
+            int expDiff = Exp.checkAndLevelUp(exp,level);
+            if(expDiff >= 0){
+                exp = expDiff;
+                level++;
+            }
+            userDao.updateExp(user,exp,level);
+            return ResultMsg.success(addExp);
         }
         return ResultMsg.error("SIGNIN_ERROR");
     }

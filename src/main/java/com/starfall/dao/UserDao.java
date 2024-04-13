@@ -25,8 +25,14 @@ public interface UserDao {
     @Select("select * from starfall.user where user = #{user}")
     UserOut findByUser(String user);
 
-    @Update("update starfall.user set exp=#{exp} where user=#{user}")
-    int updateExp(String user,int exp);
+    @Update("update starfall.user set exp=#{exp},level = #{level} where user=#{user}")
+    int updateExp(String user,int exp,int level);
+
+    @Update("update starfall.user set level=#{level} where user=#{user}")
+    int updateLevel(String user,int level);
+
+    @Update("update starfall.user set avatar=#{head} where user=#{user}")
+    int updateHead(String user,String avatar);
 
     @Update("update starfall.user set name=#{name},gender=#{gender},birthday=#{birthday} where user=#{user}")
     int updateInfo(String user,String name,int gender,String birthday);

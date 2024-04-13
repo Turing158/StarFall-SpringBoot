@@ -3,6 +3,7 @@ package com.starfall.service;
 import com.starfall.dao.TopicDao;
 import com.starfall.dao.UserDao;
 import com.starfall.entity.*;
+import com.starfall.util.Exp;
 import com.starfall.util.JwtUtil;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpSession;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Random;
 
 @Service
 @Slf4j
@@ -142,7 +144,8 @@ public class TopicService {
     public ResultMsg appendTopic(HttpSession session,String token, TopicIn topicIn){
         Claims claims = JwtUtil.parseJWT(token);
         String user = (String) claims.get("USER");
-        int level = userDao.findByUserOrEmail(user).getLevel();
+        User userObj = userDao.findByUserOrEmail(user);
+        int level = userObj.getLevel();
         if(level < 5){
             return ResultMsg.error("LEVEL_ERROR");
         }
@@ -170,7 +173,16 @@ public class TopicService {
                     topicIn.getDownload(),
                     topicIn.getContent()
             );
-            return ResultMsg.success(id);
+            Random r = new Random();
+            int addExp = r.nextInt(100)+50;
+            int exp = userObj.getExp() + addExp;
+            int expDiff = Exp.checkAndLevelUp(exp,level);
+            if(expDiff >= 0){
+                exp = expDiff;
+                level++;
+            }
+            userDao.updateExp(user,exp,level);
+            return ResultMsg.success(id,addExp);
         }
         return ResultMsg.error("CODE_ERROR");
     }
