@@ -98,4 +98,10 @@ public class TopicController {
         return topicService.deleteTopic(token,id);
     }
 
+
+    @PostMapping("/search")
+    public ResultMsg search(String key,String classification,int page){
+        return topicService.searchTopic(key,classification,page);
+    }
+
 }

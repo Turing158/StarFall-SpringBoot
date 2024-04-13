@@ -62,6 +62,11 @@ public interface TopicDao {
     @Select("select user from starfall.topic where id = #{id}")
     String findTopicUserBId(int id);
 
+    @SelectProvider(type = TopicDaoService.class,method = "search")
+    List<Search> searchByKey(String key,String classification,int page);
+    @SelectProvider(type = TopicDaoService.class,method = "searchTotal")
+    int searchTotalByKey(String key,String classification);
+
     @Insert("insert into starfall.likelog value (#{id},#{user},#{state},#{date})")
     int insertLike(int id,String user,int state,String date);
 

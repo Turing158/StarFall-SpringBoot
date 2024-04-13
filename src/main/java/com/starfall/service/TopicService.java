@@ -243,4 +243,10 @@ public class TopicService {
         return status1+status2+status3+status4 >= 2 ? ResultMsg.success() : ResultMsg.error("DELETE_ERROR");
     }
 
+    public ResultMsg searchTopic(String key,String classification,int page){
+        String newKey = "%" + key + "%";
+        System.out.println(topicDao.searchByKey(newKey,classification,(page-1)*10));
+        return ResultMsg.success(topicDao.searchByKey(newKey,classification,(page-1)*10),topicDao.searchTotalByKey(newKey,classification));
+    }
+
 }
