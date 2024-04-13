@@ -47,7 +47,6 @@ public interface TopicDao {
     @Select("select distinct version from starfall.topic order by version desc")
     List<String> findTopicVersion();
 
-
     @Select("select * from starfall.comment c join starfall.user u on c.user = u.user where topicid = #{id} order by date limit #{num},10")
     List<CommentOut> findCommentByTopicId(int id, int num);
 
@@ -78,6 +77,12 @@ public interface TopicDao {
 
     @Insert("insert into starfall.topicitem values (#{topicId},#{subtitle},#{subtitleEn},#{source},#{author},#{language},#{address},#{download},#{content})")
     int insertTopicItem(int topicId,String subtitle,String subtitleEn,String source,String author,String language,String address,String download,String content);
+
+    @Update("update starfall.topic set view = #{view} where id = #{id}")
+    int updateTopicView(int view,int id);
+
+    @Update("update starfall.topic set comment = #{comment} where id = #{id}")
+    int updateTopicComment(int comment,int id);
 
     @Update("update starfall.likelog set status = #{status},date = #{date} where topicId = #{id} and user = #{user}")
     int updateLikeStateByTopicAndUser(int id,String user,int status,String date);

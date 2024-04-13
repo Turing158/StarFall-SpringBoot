@@ -25,8 +25,8 @@ public class TopicController {
 
 
     @PostMapping("/getTopicInfo")
-    public ResultMsg getTopicInfo(int id){
-        return topicService.getTopicInfo(id);
+    public ResultMsg getTopicInfo(@RequestHeader("Authorization")String token,int id){
+        return topicService.getTopicInfo(token,id);
     }
 
 

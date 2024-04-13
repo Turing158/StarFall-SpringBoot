@@ -46,10 +46,16 @@ public class TopicService {
     }
 
 
-    public ResultMsg getTopicInfo(int id){
-        boolean flag = topicDao.findTopicInfoById(id) != null;
+    public ResultMsg getTopicInfo(String token,int id){
+        TopicOut topic = topicDao.findTopicInfoById(id);
+        boolean flag = topic != null;
         if(flag){
-            return ResultMsg.success(topicDao.findTopicInfoById(id));
+            if(token != null){
+                int oldView = topic.getView();
+                topicDao.updateTopicView(oldView+1,id);
+                topic.setView(oldView+1);
+            }
+            return ResultMsg.success(topic);
         }
         return ResultMsg.error("ID_ERROR");
     }
@@ -115,7 +121,9 @@ public class TopicService {
             LocalDateTime LDT = LocalDateTime.now();
             String date = LDT.getYear() + "-" + LDT.getMonthValue() + "-" + LDT.getDayOfMonth() + " " + LDT.getHour() + ":" + LDT.getMinute() + ":" + LDT.getSecond();
             topicDao.insertComment(topicId,user,date,content);
-            return ResultMsg.success(topicDao.findCommentCountByTopicId(topicId));
+            int count = topicDao.findCommentCountByTopicId(topicId);
+            topicDao.updateTopicComment(count,topicId);
+            return ResultMsg.success(count);
         }
         return ResultMsg.error("CODE_ERROR");
     }
@@ -124,8 +132,10 @@ public class TopicService {
     public ResultMsg deleteComment(int id,String token,String date){
         Claims claims = JwtUtil.parseJWT(token);
         String user = (String) claims.get("USER");
-        topicDao.deleteComment(id,user,date);
-        return ResultMsg.success();
+        int status1 = topicDao.deleteComment(id,user,date);
+        int count = topicDao.findCommentCountByTopicId(id);
+        int status2 = topicDao.updateTopicComment(count,id);
+        return status1+status2 == 2 ? ResultMsg.success(count) : ResultMsg.error("DELETE_ERROR");
     }
 
 
