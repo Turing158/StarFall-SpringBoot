@@ -28,13 +28,23 @@ public class UserController {
 
     @PostMapping("/register")
     public ResultMsg register(HttpSession session,String user, String password,String email, String emailCode,String code){
-        return userService.register(session,user,password,email,emailCode,code);
+        return userService.register(user,password,email,emailCode,code);
     }
     @PostMapping("/getEmailCode")
     public ResultMsg getEmailCode(HttpSession session, String email){
         return userService.getEmailCode(session,email);
     }
 
+
+    @PostMapping("/checkForgetPassword")
+    public ResultMsg checkForgetPassword(HttpSession session,String email,String emailCode,String code){
+        return userService.checkForgetPassword(session,email,emailCode,code);
+    }
+
+    @PostMapping("/forgetPassword")
+    public ResultMsg forgetPassword(HttpSession session,@RequestHeader("Authorization") String token,String password){
+        return userService.forgetPassword(session,token,password);
+    }
 
     @PostMapping("/findUserByUser")
     public ResultMsg findUserByUser(String user){
@@ -60,13 +70,13 @@ public class UserController {
     }
 
     @PostMapping("/getOldEmailCode")
-    public ResultMsg getOldEmailCode(@RequestHeader("Authorization") String token){
-        return userService.sendOldEmailCode(token);
+    public ResultMsg getOldEmailCode(HttpSession session,@RequestHeader("Authorization") String token){
+        return userService.sendOldEmailCode(session,token);
     }
 
     @PostMapping("/getNewEmailCode")
-    public ResultMsg getNewEmailCode(String newEmail){
-        return userService.sendNewEmailCode(newEmail);
+    public ResultMsg getNewEmailCode(HttpSession session,String newEmail){
+        return userService.sendNewEmailCode(session,newEmail);
     }
 
     @PostMapping("/updateEmail")

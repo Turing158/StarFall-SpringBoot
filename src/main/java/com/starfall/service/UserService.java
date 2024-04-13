@@ -81,10 +81,13 @@ public class UserService {
         session.invalidate();
         return ResultMsg.success();
     }
-    public ResultMsg register(HttpSession session,String user, String password, String email,String emailCode,String code){
+    public ResultMsg register(String user, String password, String email,String emailCode,String code){
         if(userDao.existUser(user) == 0){
             if(userDao.existEmail(email) == 0){
-                String emailCodeSession = (String) session.getAttribute("emailCode");
+                if(Boolean.FALSE.equals(stringRedisTemplate.hasKey("emailCode"))){
+                    return ResultMsg.error("EMAIL_CODE_EXPIRED");
+                }
+                String emailCodeSession = stringRedisTemplate.opsForValue().get("emailCode");
                 if(emailCodeSession.equals(emailCode.toUpperCase())){
                     AECSecure aecSecure = new AECSecure();
                     LocalDateTime ldt = LocalDateTime.now();
@@ -101,15 +104,49 @@ public class UserService {
         return ResultMsg.error("USER_ERROR");
     }
     public ResultMsg getEmailCode(HttpSession session, String email){
-        int status = userDao.existEmail(email);
-        if(status == 0){
-            String code = CodeUtil.getCode(6);
-            mailUtil.reg_mail(email,code);
-            session.setAttribute("emailCode",code.toUpperCase());
+        String code = CodeUtil.getCode(6);
+        mailUtil.reg_mail(email,code.toUpperCase());
+        session.setAttribute("emailCode",code.toUpperCase());
+        return ResultMsg.success();
+    }
+
+
+
+    public ResultMsg checkForgetPassword(HttpSession session,String email,String emailCode,String code){
+        String codeSession = (String) session.getAttribute("code");
+        if(codeSession.equals(code)){
+            String emailCodeSession = (String) session.getAttribute("emailCode");
+            if(emailCodeSession.equals(emailCode.toUpperCase())){
+                User user = userDao.findByUserOrEmail(email);
+                if(user != null) {
+                    Map<String,Object> claims = new HashMap<>();
+                    claims.put("USER",user.getUser());
+                    claims.put("EMAIL",user.getEmail());
+                    claims.put("CODE",emailCodeSession);
+                    String token = JwtUtil.generateJwt(claims);
+                    return ResultMsg.success(token);
+                }
+                return ResultMsg.error("EMAIL_ERROR");
+            }
+            return ResultMsg.error("EMAIL_CODE_ERROR");
+        }
+        return ResultMsg.error("CODE_ERROR");
+    }
+
+    public ResultMsg forgetPassword(HttpSession session,String token,String password){
+        Claims claims = JwtUtil.parseJWT(token);
+        String user = (String) claims.get("USER");
+        String email = (String) claims.get("EMAIL");
+        String code = (String) claims.get("CODE");
+        String emailCodeSession = (String) session.getAttribute("emailCode");
+        if(emailCodeSession.equals(code.toUpperCase())){
+            userDao.updatePassword(user,aecSecure.encrypt(password));
             return ResultMsg.success();
         }
-        return ResultMsg.error("EMAIL_ERROR");
+        return ResultMsg.error("EMAIL_CODE_ERROR");
     }
+
+
 
     public ResultMsg settingInfo(HttpSession session,String token,String name,int gender,String birthday,String code){
         String codeSession = (String) session.getAttribute("code");
@@ -164,22 +201,21 @@ public class UserService {
         return ResultMsg.error("USER_ERROR");
     }
 
-    public ResultMsg sendOldEmailCode(String token){
+    public ResultMsg sendOldEmailCode(HttpSession session,String token){
         Claims claims = JwtUtil.parseJWT(token);
         String user = (String) claims.get("USER");
         User userObj = userDao.findByUserOrEmail(user);
         String code = CodeUtil.getCode(6);
-        stringRedisTemplate.opsForValue().set("oldEmailCode",code.toUpperCase(),10, TimeUnit.MINUTES);
+        session.setAttribute("oldEmailCode",code.toUpperCase());
         mailUtil.custom_mail(userObj.getEmail(),"修改旧邮箱",code.toUpperCase());
         System.out.println(code);
         return ResultMsg.success();
     }
 
-    public ResultMsg sendNewEmailCode(String email){
+    public ResultMsg sendNewEmailCode(HttpSession session,String email){
         String code = CodeUtil.getCode(6);
-        stringRedisTemplate.opsForValue().set("newEmailCode",code.toUpperCase(),10, TimeUnit.MINUTES);
+        session.setAttribute("newEmailCode",code.toUpperCase());
         mailUtil.custom_mail(email,"新邮箱",code.toUpperCase());
-        System.out.println(code);
         return ResultMsg.success();
     }
 
