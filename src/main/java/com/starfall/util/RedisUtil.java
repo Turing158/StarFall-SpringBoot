@@ -35,9 +35,9 @@ public class RedisUtil {
 
     public Object get(String key){
         if(hasKey(key)){
-            return null;
+            ValueOperations<String,Object> operations = redisTemplate.opsForValue();
+            return operations.get(key);
         }
-        ValueOperations<String,Object> operations = redisTemplate.opsForValue();
-        return operations.get(key);
+        return null;
     }
 }
