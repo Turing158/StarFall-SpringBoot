@@ -80,8 +80,8 @@ public class UserController {
     }
 
     @PostMapping("/updateEmail")
-    public ResultMsg updateEmail(@RequestHeader("Authorization") String token,String newEmail,String oldEmailCode,String newEmailCode){
-        return userService.settingEmail(token, newEmail, oldEmailCode, newEmailCode);
+    public ResultMsg updateEmail(HttpSession session,@RequestHeader("Authorization") String token,String newEmail,String oldEmailCode,String newEmailCode){
+        return userService.settingEmail(session,token, newEmail, oldEmailCode, newEmailCode);
     }
 
 

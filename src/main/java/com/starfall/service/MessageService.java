@@ -6,10 +6,7 @@ import com.starfall.entity.Message;
 import com.starfall.entity.MessageTerm;
 import com.starfall.entity.ResultMsg;
 import com.starfall.entity.User;
-import com.starfall.util.DateUtil;
-import com.starfall.util.JsonOperate;
-import com.starfall.util.JwtUtil;
-import com.starfall.util.WebSocket;
+import com.starfall.util.*;
 import io.jsonwebtoken.Claims;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -27,6 +24,8 @@ public class MessageService {
     UserDao userDao;
     @Autowired
     WebSocket webSocket;
+    @Autowired
+    RedisUtil redisUtil;
 
     public ResultMsg getMessageList(String token){
         Claims claims = JwtUtil.parseJWT(token);
@@ -91,8 +90,14 @@ public class MessageService {
     public ResultMsg SendMessage(String token,String toUser,String content){
         Claims claims = JwtUtil.parseJWT(token);
         String fromUser = (String) claims.get("USER");
-        User fromUserObj= userDao.findByUserOrEmail(fromUser);
-        User toUserObj= userDao.findByUserOrEmail(fromUser);
+        User fromUserObj;
+        if(redisUtil.hasKey(token)){
+            fromUserObj = (User) redisUtil.get(token);
+        }
+        else{
+            fromUserObj = userDao.findByUserOrEmail(fromUser);
+        }
+        User toUserObj= userDao.findByUserOrEmail(toUser);
         if(fromUserObj != null){
             LocalDateTime now = LocalDateTime.now();
             String date = now.getYear()+"-"+ DateUtil.fillZero(now.getMonthValue()+1)+"-"+DateUtil.fillZero(now.getDayOfMonth())+" "+DateUtil.fillZero(now.getHour())+":"+DateUtil.fillZero(now.getMinute())+":"+DateUtil.fillZero(now.getSecond());

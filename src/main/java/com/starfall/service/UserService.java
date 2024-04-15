@@ -14,10 +14,7 @@ import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -36,7 +33,7 @@ public class UserService {
     @Autowired
     StringRedisTemplate stringRedisTemplate;
     @Autowired
-    RedisTemplate redisTemplate;
+    RedisUtil redisUtil;
     public ResultMsg login(HttpSession session,String account, String password,String code) {
         String sessionCode = (String) session.getAttribute("code");
         if(sessionCode.equals(code)){
@@ -62,8 +59,7 @@ public class UserService {
             claims.put("USER",user.getUser());
             claims.put("EMAIL",user.getEmail());
             String token = JwtUtil.generateJwt(claims);
-            ValueOperations<String,Object> operations = redisTemplate.opsForValue();
-            operations.set(token,user,1, TimeUnit.DAYS);
+            redisUtil.set(token,user,1, TimeUnit.DAYS);
             return ResultMsg.success(token);
         }
         return ResultMsg.error("PASSWORD_ERROR");
@@ -74,9 +70,8 @@ public class UserService {
         Claims claims = JwtUtil.parseJWT(token);
         String user = (String) claims.get("USER");
         User userObj;
-        if(Boolean.TRUE.equals(redisTemplate.hasKey(token))){
-            userObj = (User) redisTemplate.opsForValue().get(token);
-
+        if(redisUtil.hasKey(token)){
+            userObj = (User) redisUtil.get(token);
         }
         else{
             userObj = userDao.findByUserOrEmail(user);
@@ -171,7 +166,13 @@ public class UserService {
             String user = (String) claims.get("USER");
             int status = userDao.updateInfo(user,name,gender,birthday);
             if(status == 1){
-                User userObj = userDao.findByUserOrEmail(user);
+                User userObj;
+                if(redisUtil.hasKey(token)){
+                    userObj = (User) redisUtil.get(token);
+                }
+                else{
+                    userObj = userDao.findByUserOrEmail(user);
+                }
                 UserOut userOut = new UserOut(
                         userObj.getUser(),
                         userObj.getName(),
@@ -195,7 +196,13 @@ public class UserService {
         if(codeSession.equals(code)){
             Claims claims = JwtUtil.parseJWT(token);
             String user = (String) claims.get("USER");
-            User userObj = userDao.findByUserOrEmail(user);
+            User userObj;
+            if(redisUtil.hasKey(token)){
+                userObj = (User) redisUtil.get(token);
+            }
+            else{
+                userObj = userDao.findByUserOrEmail(user);
+            }
             String encryptOldPassword = aecSecure.encrypt(oldPassword);
             if(userObj.getPassword().equals(encryptOldPassword)){
                 String encryptNewPassword = aecSecure.encrypt(newPassword);
@@ -215,6 +222,13 @@ public class UserService {
     public ResultMsg settingAvatar(String token,String avatarBase64){
         Claims claims = JwtUtil.parseJWT(token);
         String user = (String) claims.get("USER");
+        User userObj;
+        if(redisUtil.hasKey(token)){
+            userObj = (User) redisUtil.get(token);
+        }
+        else{
+            userObj = userDao.findByUserOrEmail(user);
+        }
         String avatarOutHead = "data:image/png;base64,";
         if(avatarBase64.startsWith(avatarOutHead)){
             avatarBase64 = avatarBase64.substring(avatarOutHead.length());
@@ -239,7 +253,11 @@ public class UserService {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        File deleteFile = new File(avatarSavePath + "/" + userObj.getAvatar());
+        deleteFile.delete();
         userDao.updateAvatar(user,fileName);
+        userObj.setAvatar(fileName);
+        redisUtil.set(token,userObj,1,TimeUnit.DAYS);
         return ResultMsg.success(fileName);
     }
 
@@ -250,7 +268,6 @@ public class UserService {
         String code = CodeUtil.getCode(6);
         session.setAttribute("oldEmailCode",code.toUpperCase());
         mailUtil.custom_mail(userObj.getEmail(),"修改旧邮箱",code.toUpperCase());
-        System.out.println(code);
         return ResultMsg.success();
     }
 
@@ -261,17 +278,9 @@ public class UserService {
         return ResultMsg.success();
     }
 
-    public ResultMsg settingEmail(String token,String newEmail,String oldEmailCode,String newEmailCode){
-        if(Boolean.FALSE.equals(stringRedisTemplate.hasKey("oldEmailCode"))){
-            return ResultMsg.error("OLD_EMAIL_CODE_EXPIRED");
-        }
-        if(Boolean.FALSE.equals(stringRedisTemplate.hasKey("newEmailCode"))){
-            return ResultMsg.error("NEW_EMAIL_CODE_EXPIRED");
-        }
-        String oldEmailCodeSession = stringRedisTemplate.opsForValue().get("oldEmailCode");
-        String newEmailCodeSession = stringRedisTemplate.opsForValue().get("newEmailCode");
-        System.out.println(oldEmailCodeSession);
-        System.out.println(newEmailCodeSession);
+    public ResultMsg settingEmail(HttpSession session,String token,String newEmail,String oldEmailCode,String newEmailCode){
+        String oldEmailCodeSession = session.getAttribute("oldEmailCode").toString();
+        String newEmailCodeSession = session.getAttribute("newEmailCode").toString();
         if(oldEmailCodeSession.equals(oldEmailCode.toUpperCase())){
             if(newEmailCodeSession.equals(newEmailCode.toUpperCase())){
                 Claims claims = JwtUtil.parseJWT(token);
@@ -357,7 +366,13 @@ public class UserService {
             signInDao.insertSignIn(user,date,msg,emotion);
             Random r = new Random();
             int addExp = r.nextInt(50)+20;
-            User userObj = userDao.findByUserOrEmail(user);
+            User userObj;
+            if(redisUtil.hasKey(token)){
+                userObj = (User) redisUtil.get(token);
+            }
+            else{
+                userObj = userDao.findByUserOrEmail(user);
+            }
             int exp = userObj.getExp() + addExp;
             int level = userObj.getLevel();
             int expDiff = Exp.checkAndLevelUp(exp,level);
