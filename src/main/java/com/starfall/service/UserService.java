@@ -200,7 +200,7 @@ public class UserService {
         return ResultMsg.error("CODE_ERROR");
     }
 
-    @Value("${avatar.save.path}")
+    @Value("${avatar.sava.path}")
     String avatarSavePath = "";
     public ResultMsg settingAvatar(String token,String avatarBase64){
         Claims claims = JwtUtil.parseJWT(token);
