@@ -6,6 +6,7 @@ import com.starfall.entity.Message;
 import com.starfall.entity.MessageTerm;
 import com.starfall.entity.ResultMsg;
 import com.starfall.entity.User;
+import com.starfall.util.DateUtil;
 import com.starfall.util.JsonOperate;
 import com.starfall.util.JwtUtil;
 import com.starfall.util.WebSocket;
@@ -94,7 +95,7 @@ public class MessageService {
         User toUserObj= userDao.findByUserOrEmail(fromUser);
         if(fromUserObj != null){
             LocalDateTime now = LocalDateTime.now();
-            String date = now.getYear()+"-"+fillZero(now.getMonthValue()+1+"")+"-"+fillZero(now.getDayOfMonth()+"")+" "+fillZero(now.getHour()+"")+":"+fillZero(now.getMinute()+"")+":"+fillZero(now.getSecond()+"");
+            String date = now.getYear()+"-"+ DateUtil.fillZero(now.getMonthValue()+1)+"-"+DateUtil.fillZero(now.getDayOfMonth())+" "+DateUtil.fillZero(now.getHour())+":"+DateUtil.fillZero(now.getMinute())+":"+DateUtil.fillZero(now.getSecond());
             Message message = new Message(fromUser,fromUserObj.getName(),fromUserObj.getAvatar(),toUser,toUserObj.getName(),toUserObj.getAvatar(),date,content);
             webSocket.sendMessageToUser(toUser, JsonOperate.toJson(message));
             List<Message> fromUserMsgs = messageDao.findFromUserMsgByFromUserAndToUser(fromUser,toUser);
@@ -123,12 +124,7 @@ public class MessageService {
     }
 
 
-    public String fillZero(String str){
-        if(str.length() == 1){
-            return "0"+str;
-        }
-        return str;
-    }
+
 
     public ResultMsg testSend(){
         LocalDateTime now = LocalDateTime.now();
