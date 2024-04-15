@@ -7,9 +7,15 @@ import com.starfall.util.*;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -194,11 +200,37 @@ public class UserService {
         return ResultMsg.error("CODE_ERROR");
     }
 
-    public ResultMsg settingAvatar(String token,String avatar){
+    @Value("${avatar.save.path}")
+    String avatarSavePath = "";
+    public ResultMsg settingAvatar(String token,String avatarBase64){
         Claims claims = JwtUtil.parseJWT(token);
         String user = (String) claims.get("USER");
-        userDao.updateAvatar(user,avatar);
-        return ResultMsg.error("USER_ERROR");
+        String avatarOutHead = "data:image/png;base64,";
+        if(avatarBase64.startsWith(avatarOutHead)){
+            avatarBase64 = avatarBase64.substring(avatarOutHead.length());
+        }
+        byte[] bytes = Base64.getDecoder().decode(avatarBase64);
+        for (int i = 0; i < bytes.length; ++i) {
+            if (bytes[i] < 0) {// 调整异常数据
+                bytes[i] += 256;
+            }
+        }
+        LocalDateTime ldt = LocalDateTime.now();
+        String date = ldt.getYear()  + DateUtil.fillZero(ldt.getMonthValue()+1) + DateUtil.fillZero(ldt.getDayOfMonth()) + DateUtil.fillZero(ldt.getHour()) + DateUtil.fillZero(ldt.getMinute()) + DateUtil.fillZero(ldt.getSecond()) + DateUtil.fillZero(ldt.getNano());
+        String avatarName = date + user;
+        String fileName = avatarName + ".png";
+        try {
+            OutputStream out = new FileOutputStream(avatarSavePath + "/" + fileName);
+            out.write(bytes);
+            out.flush();
+            out.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        userDao.updateAvatar(user,fileName);
+        return ResultMsg.success(fileName);
     }
 
     public ResultMsg sendOldEmailCode(HttpSession session,String token){

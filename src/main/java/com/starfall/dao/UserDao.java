@@ -28,7 +28,7 @@ public interface UserDao {
     @Update("update starfall.user set exp=#{exp},level = #{level} where user=#{user}")
     int updateExp(String user,int exp,int level);
 
-    @Update("update starfall.user set avatar=#{head} where user=#{user}")
+    @Update("update starfall.user set avatar=#{avatar} where user=#{user}")
     int updateAvatar(String user,String avatar);
 
     @Update("update starfall.user set name=#{name},gender=#{gender},birthday=#{birthday} where user=#{user}")

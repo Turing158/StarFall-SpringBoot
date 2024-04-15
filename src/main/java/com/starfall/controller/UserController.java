@@ -65,8 +65,8 @@ public class UserController {
 
 
     @PostMapping("/updateAvatar")
-    public ResultMsg updateAvatar(@RequestHeader("Authorization") String token,String avatar){
-        return userService.settingAvatar(token,avatar);
+    public ResultMsg updateAvatar(@RequestHeader("Authorization") String token,String avatarBase64){
+        return userService.settingAvatar(token,avatarBase64);
     }
 
     @PostMapping("/getOldEmailCode")
