@@ -28,7 +28,7 @@ public class UserController {
 
     @PostMapping("/register")
     public ResultMsg register(HttpSession session,String user, String password,String email, String emailCode,String code){
-        return userService.register(user,password,email,emailCode,code);
+        return userService.register(session,user,password,email,emailCode,code);
     }
     @PostMapping("/getEmailCode")
     public ResultMsg getEmailCode(HttpSession session, String email){

@@ -8,7 +8,9 @@ import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -33,6 +35,8 @@ public class UserService {
     MailUtil mailUtil;
     @Autowired
     StringRedisTemplate stringRedisTemplate;
+    @Autowired
+    RedisTemplate redisTemplate;
     public ResultMsg login(HttpSession session,String account, String password,String code) {
         String sessionCode = (String) session.getAttribute("code");
         if(sessionCode.equals(code)){
@@ -58,6 +62,8 @@ public class UserService {
             claims.put("USER",user.getUser());
             claims.put("EMAIL",user.getEmail());
             String token = JwtUtil.generateJwt(claims);
+            ValueOperations<String,Object> operations = redisTemplate.opsForValue();
+            operations.set(token,user,1, TimeUnit.DAYS);
             return ResultMsg.success(token);
         }
         return ResultMsg.error("PASSWORD_ERROR");
@@ -67,7 +73,14 @@ public class UserService {
     public ResultMsg getUserInfo(String token){
         Claims claims = JwtUtil.parseJWT(token);
         String user = (String) claims.get("USER");
-        User userObj = userDao.findByUserOrEmail(user);
+        User userObj;
+        if(Boolean.TRUE.equals(redisTemplate.hasKey(token))){
+            userObj = (User) redisTemplate.opsForValue().get(token);
+
+        }
+        else{
+            userObj = userDao.findByUserOrEmail(user);
+        }
         UserOut userOut = new UserOut(
                 userObj.getUser(),
                 userObj.getName(),
@@ -87,13 +100,10 @@ public class UserService {
         session.invalidate();
         return ResultMsg.success();
     }
-    public ResultMsg register(String user, String password, String email,String emailCode,String code){
+    public ResultMsg register(HttpSession session,String user, String password, String email,String emailCode,String code){
         if(userDao.existUser(user) == 0){
             if(userDao.existEmail(email) == 0){
-                if(Boolean.FALSE.equals(stringRedisTemplate.hasKey("emailCode"))){
-                    return ResultMsg.error("EMAIL_CODE_EXPIRED");
-                }
-                String emailCodeSession = stringRedisTemplate.opsForValue().get("emailCode");
+                String emailCodeSession = session.getAttribute("emailCode").toString();
                 if(emailCodeSession.equals(emailCode.toUpperCase())){
                     AECSecure aecSecure = new AECSecure();
                     LocalDateTime ldt = LocalDateTime.now();
