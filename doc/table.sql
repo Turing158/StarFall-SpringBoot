@@ -6,6 +6,8 @@ create table notice
 );
 
 
+
+
 create table user
 (
     user     varchar(40)  not null
@@ -21,6 +23,23 @@ create table user
 );
 
 
+create table chat_notice
+(
+    from_user varchar(40)  null,
+    to_user   varchar(40)  null,
+    date      datetime     null,
+    content   varchar(255) null
+);
+
+
+
+create table sign_in
+(
+    user    varchar(40)  null,
+    date    date         null,
+    message varchar(100) null,
+    emotion varchar(10)  null
+);
 
 create table topic
 (
@@ -32,12 +51,20 @@ create table topic
     date    date         null,
     view    int          null,
     comment int          null,
-    version varchar(10)  null,
+    version varchar(100) null,
     constraint topic_user_user_fk
         foreign key (user) references user (user)
 );
 
-
+create table likelog
+(
+    topicId int         null,
+    user    varchar(40) null,
+    status  int         null,
+    date    datetime    null,
+    constraint likeLog_topic_id_fk
+        foreign key (topicId) references topic (id)
+);
 
 create table topicitem
 (
@@ -54,25 +81,10 @@ create table topicitem
         foreign key (topicId) references topic (id)
 );
 
-
-
-create table likelog
-(
-    topicId int         null,
-    user    varchar(40) null,
-    state   int         null,
-    date    date        null,
-    constraint likeLog_topic_id_fk
-        foreign key (topicId) references topic (id)
-);
-
 create table comment
 (
-    topicid int           null,
+    topicId int           null,
     user    varchar(40)   null,
     date    datetime      null,
     content varchar(8164) null
 );
-
-
-
