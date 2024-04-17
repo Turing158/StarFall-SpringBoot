@@ -19,7 +19,8 @@ create table user
     birthday date         null,
     exp      int          null,
     level    int          null,
-    avatar   varchar(255) null
+    avatar   varchar(255) null,
+    role     varchar(20) null
 );
 
 
