@@ -18,6 +18,7 @@ public class UserOut {
     int level;
     int maxExp;
     String avatar;
+    String roles;
     public UserOut(String user, String name, int gender,String email,String birthday,int exp,int level,String avatar){
         this.user = user;
         this.name = name;
