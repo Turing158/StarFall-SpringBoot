@@ -6,6 +6,9 @@ import org.apache.ibatis.session.SqlSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.text.DateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Service
@@ -105,6 +108,42 @@ public class AdminTopicService {
     }
 
 
+    public ResultMsg findAllTopicItem(int page){
+        return ResultMsg.success(topicDao.findAllTopicItem((page-1)*10),topicDao.countTopic());
+    }
 
+    public ResultMsg findTopicItemById(int id,int page){
+        return ResultMsg.success(topicDao.findLikeItemByTopicId(id,(page-1)*10),topicDao.countLikeItemByTopicId(id));
+    }
+
+    public ResultMsg addLikeLog(LikeLog likeLog){
+        DateTimeFormatter df = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        String date = LocalDateTime.now().format(df);
+        likeLog.setDate(date);
+        if (topicDao.existLikeItemOutStatus(likeLog.getTopicId(),likeLog.getUser()) == 0){
+            int status = topicDao.addLikeItem(likeLog);
+            return status == 1 ? ResultMsg.success() : ResultMsg.error("DATABASE_ERROR");
+        }
+        if(topicDao.existLikeItem(likeLog.getTopicId(),likeLog.getUser(),0) == 1){
+            int status = topicDao.updateLikeItem(likeLog);
+            return status == 1 ? ResultMsg.success() : ResultMsg.error("DATABASE_ERROR");
+        }
+        if(topicDao.existLikeItem(likeLog.getTopicId(),likeLog.getUser(),likeLog.getStatus()) == 1){
+            return ResultMsg.error("LIKE_LOG_EXIST_ERROR");
+        }
+        int status = topicDao.updateLikeItem(likeLog);
+        return status == 1 ? ResultMsg.warning("LIKE_STATUS_UPDATE") : ResultMsg.error("DATABASE_ERROR");
+    }
+
+    public ResultMsg updateLikeLog(LikeLog likeLog){
+        DateTimeFormatter df = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        String date = LocalDateTime.now().format(df);
+        likeLog.setDate(date);
+        if(topicDao.existLikeItemOutStatus(likeLog.getTopicId(),likeLog.getUser()) == 1){
+            int status = topicDao.updateLikeItem(likeLog);
+            return status == 1 ? ResultMsg.success() : ResultMsg.error("DATABASE_ERROR");
+        }
+        return ResultMsg.error("NOT_EXIST_ERROR");
+    }
 
 }

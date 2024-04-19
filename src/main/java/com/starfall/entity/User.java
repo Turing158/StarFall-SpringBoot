@@ -20,5 +20,5 @@ public class User implements Serializable {
     int exp;
     int level;
     String avatar;
-    String roles;
+    String role;
 }

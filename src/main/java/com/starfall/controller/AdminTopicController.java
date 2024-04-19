@@ -60,6 +60,24 @@ public class AdminTopicController {
         return topicService.deleteTopicComment(comment);
     }
 
+    @PostMapping("/adminFindAllTopicItem")
+    public ResultMsg findAllLikeLog(int page) {
+        return topicService.findAllTopicItem(page);
+    }
 
+    @PostMapping("/adminFindLikeItem")
+    public ResultMsg findAllLikeLog(int id,int page) {
+        return topicService.findTopicItemById(id,page);
+    }
+
+    @PostMapping("/adminAddLikeItem")
+    public ResultMsg addLikeLog(@RequestBody LikeLog likeLog){
+        return topicService.addLikeLog(likeLog);
+    }
+
+    @PostMapping("/adminUpdateLikeItem")
+    public ResultMsg updateLikeLog(@RequestBody LikeLog likeLog){
+        return topicService.updateLikeLog(likeLog);
+    }
 
 }
