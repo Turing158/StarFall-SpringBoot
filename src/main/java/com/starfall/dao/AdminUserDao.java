@@ -10,4 +10,9 @@ import java.util.List;
 public interface AdminUserDao {
     @Select("select * from starfall.user")
     List<User> findAllUser();
+
+    @Select("select * from starfall.user limit #{page},10")
+    List<User> findUserByPage(int page);
+    @Select("select count(*) from starfall.user limit 1")
+    int countUser();
 }

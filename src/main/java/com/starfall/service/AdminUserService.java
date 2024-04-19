@@ -26,4 +26,12 @@ public class AdminUserService {
         });
         return ResultMsg.success(newUsers);
     }
+
+    public ResultMsg findAllUsers(int page) {
+        List<User> users = userDao.findUserByPage((page-1)*10);
+        users.forEach(user -> {
+            user.setPassword("***");
+        });
+        return ResultMsg.success(users,userDao.countUser());
+    }
 }
