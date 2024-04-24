@@ -364,7 +364,6 @@ public class UserService {
         String date = ldt.getYear() + "-" + ldt.getMonthValue() + "-" + ldt.getDayOfMonth();
         SignIn signIn = signInDao.findSignInByUser(user,date);
         if(signIn == null){
-            signInDao.insertSignIn(user,date,msg,emotion);
             Random r = new Random();
             int addExp = r.nextInt(50)+20;
             User userObj;
@@ -381,7 +380,10 @@ public class UserService {
                 exp = expDiff;
                 level++;
             }
+            msg = "[获得"+exp+"点经验] "+msg;
+            signInDao.insertSignIn(user,date,msg,emotion);
             userDao.updateExp(user,exp,level);
+
             return ResultMsg.success(addExp);
         }
         return ResultMsg.error("SIGNIN_ERROR");
