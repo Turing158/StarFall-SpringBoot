@@ -1,6 +1,7 @@
 package com.starfall.controller;
 
 import com.starfall.entity.ResultMsg;
+import com.starfall.entity.SignIn;
 import com.starfall.entity.User;
 import com.starfall.service.AdminUserService;
 import lombok.AllArgsConstructor;
@@ -58,6 +59,28 @@ public class AdminUserController {
     public ResultMsg updateAvatar(String user,String avatar) {
         return userService.updateAvatar(user,avatar);
     }
+
+    @PostMapping("/adminFindAllSignIn")
+    public ResultMsg findAllSignIn(int page) {
+        return userService.findAllSignIn(page);
+    }
+
+    @PostMapping("/adminAppendSignIn")
+    public ResultMsg appendSignIn(@RequestBody SignIn signIn) {
+        return userService.appendSignIn(signIn);
+    }
+
+    @PostMapping("/adminUpdateSignIn")
+    public ResultMsg updateSignIn(@RequestBody SignIn signIn) {
+        return userService.updateSignIn(signIn);
+    }
+
+    @PostMapping("/adminDeleteSignIn")
+    public ResultMsg deleteSignIn(@RequestBody SignIn signIn) {
+        return userService.deleteSignIn(signIn);
+    }
+
+
 
 
 }

@@ -1,5 +1,6 @@
 package com.starfall.dao;
 
+import com.starfall.entity.SignIn;
 import com.starfall.entity.User;
 import org.apache.ibatis.annotations.*;
 
@@ -24,8 +25,20 @@ public interface AdminUserDao {
     @Select("select * from starfall.user where user=#{user} limit 1")
     User findUserByUser(String user);
 
+    @Select("select * from starfall.sign_in join starfall.user u on sign_in.user = u.user order by date desc limit #{page},10")
+    List<SignIn> findSignInByPage(int page);
+
+    @Select("select count(*) from starfall.sign_in")
+    int countSignIn();
+
+    @Select("select count(*) from starfall.sign_in where user=#{user} and date=#{date} limit 1")
+    int existSignIn(String user,String date);
+
     @Insert("insert into starfall.user values(#{user},#{password},#{name},#{gender},#{email},#{birthday},#{exp},#{level},#{avatar},#{role})")
     int insertUser(User user);
+
+    @Insert("insert into starfall.sign_in values(#{user},#{date},#{message},#{emotion})")
+    int insertSignIn(SignIn signIn);
 
     @Update("update starfall.user set user=#{user.user},password=#{user.password},name=#{user.name},gender=#{user.gender},email=#{user.email},birthday=#{user.birthday},exp=#{user.exp},level=#{user.level},avatar=#{user.avatar},role=#{user.role} where user=#{oldUser}")
     int updateUser(User user,String oldUser);
@@ -33,7 +46,13 @@ public interface AdminUserDao {
     @Update("update starfall.user set avatar=#{avatar} where user=#{user}")
     int updateAvatar(String user,String avatar);
 
+    @Update("update starfall.sign_in set message=#{message},emotion=#{emotion} where user=#{user} and date=#{date}")
+    int updateSignIn(SignIn signIn);
+
     @Delete("delete from starfall.user where user=#{user}")
     int deleteUser(String user);
+
+    @Delete("delete from starfall.sign_in where user=#{user} and date=#{date}")
+    int deleteSignIn(SignIn signIn);
 
 }

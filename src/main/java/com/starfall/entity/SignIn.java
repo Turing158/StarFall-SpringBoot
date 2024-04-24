@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class SignIn {
     String user;
+    String name;
     String date;
     String message;
     String emotion;

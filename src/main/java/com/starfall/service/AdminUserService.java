@@ -2,6 +2,7 @@ package com.starfall.service;
 
 import com.starfall.dao.AdminUserDao;
 import com.starfall.entity.ResultMsg;
+import com.starfall.entity.SignIn;
 import com.starfall.entity.User;
 import com.starfall.util.AECSecure;
 import com.starfall.util.DateUtil;
@@ -126,6 +127,34 @@ public class AdminUserService {
         userDao.updateAvatar(user,fileName);
         return ResultMsg.success(fileName);
     }
+
+    public ResultMsg findAllSignIn(int page){
+        return ResultMsg.success(userDao.findSignInByPage((page-1)*10),userDao.countSignIn());
+    }
+
+    public ResultMsg appendSignIn(SignIn signIn){
+        if(userDao.existSignIn(signIn.getUser(),signIn.getDate()) == 0){
+            int status = userDao.insertSignIn(signIn);
+            return status == 1 ? ResultMsg.success() : ResultMsg.error("DATASOURCE_ERROR");
+        }
+        return ResultMsg.error("SIGN_IN_EXIST");
+    }
+
+    public ResultMsg updateSignIn(SignIn signIn){
+        int status = userDao.updateSignIn(signIn);
+        return status == 1 ? ResultMsg.success() : ResultMsg.error("DATASOURCE_ERROR");
+    }
+
+
+    public ResultMsg deleteSignIn(SignIn signIn){
+        if(userDao.existSignIn(signIn.getUser(),signIn.getDate()) == 1){
+            int status = userDao.deleteSignIn(signIn);
+            return status == 1 ? ResultMsg.success() : ResultMsg.error("DATASOURCE_ERROR");
+        }
+        return ResultMsg.error("SIGN_IN_NOT_EXIST");
+    }
+
+
 
 }
 
