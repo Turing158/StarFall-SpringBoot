@@ -4,12 +4,20 @@ import com.starfall.dao.AdminUserDao;
 import com.starfall.entity.ResultMsg;
 import com.starfall.entity.User;
 import com.starfall.util.AECSecure;
+import com.starfall.util.DateUtil;
+import com.starfall.util.JwtUtil;
+import io.jsonwebtoken.Claims;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.io.*;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class AdminUserService {
@@ -76,6 +84,47 @@ public class AdminUserService {
             return status == 1 ? ResultMsg.success() : ResultMsg.error("DATASOURCE_ERROR");
         }
         return ResultMsg.error("USER_NOT_EXIST");
+    }
+
+
+
+    @Value("${avatar.sava.path}")
+    String avatarSavePath = "";
+    public ResultMsg updateAvatar(String user,String avatar){
+        if(avatar.equals("default.png")){
+            userDao.updateAvatar(user,"default.png");
+            return ResultMsg.success("default.png");
+        }
+        User userObj = userDao.findUserByUser(user);
+        String oldAvatar = userObj.getAvatar();
+        String avatarOutHead = "data:image/png;base64,";
+        if(avatar.startsWith(avatarOutHead)){
+            avatar = avatar.substring(avatarOutHead.length());
+        }
+        byte[] bytes = Base64.getDecoder().decode(avatar);
+        for (int i = 0; i < bytes.length; ++i) {
+            if (bytes[i] < 0) {// 调整异常数据
+                bytes[i] += 256;
+            }
+        }
+        LocalDateTime ldt = LocalDateTime.now();
+        String date = ldt.getYear()  + DateUtil.fillZero(ldt.getMonthValue()+1) + DateUtil.fillZero(ldt.getDayOfMonth()) + DateUtil.fillZero(ldt.getHour()) + DateUtil.fillZero(ldt.getMinute()) + DateUtil.fillZero(ldt.getSecond()) + DateUtil.fillZero(ldt.getNano());
+        String avatarName = date + user;
+        String fileName = avatarName + ".png";
+        try {
+            OutputStream out = new FileOutputStream(avatarSavePath + "/" + fileName);
+            out.write(bytes);
+            out.flush();
+            out.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        if(!oldAvatar.equals("default.png")){
+            File deleteFile = new File(avatarSavePath + "/" + oldAvatar);
+            deleteFile.delete();
+        }
+        userDao.updateAvatar(user,fileName);
+        return ResultMsg.success(fileName);
     }
 
 }

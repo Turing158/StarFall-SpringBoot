@@ -54,5 +54,11 @@ public class AdminUserController {
         return userService.deleteUser(user);
     }
 
+    @PostMapping("/adminUpdateAvatar")
+    public ResultMsg updateAvatar(String user,String avatar) {
+        return userService.updateAvatar(user,avatar);
+    }
+
+
 }
 
