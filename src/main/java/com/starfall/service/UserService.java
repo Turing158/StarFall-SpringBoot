@@ -229,6 +229,7 @@ public class UserService {
         else{
             userObj = userDao.findByUserOrEmail(user);
         }
+        String oldAvatar = userObj.getAvatar();
         String avatarOutHead = "data:image/png;base64,";
         if(avatarBase64.startsWith(avatarOutHead)){
             avatarBase64 = avatarBase64.substring(avatarOutHead.length());
@@ -248,13 +249,13 @@ public class UserService {
             out.write(bytes);
             out.flush();
             out.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         }
-        File deleteFile = new File(avatarSavePath + "/" + userObj.getAvatar());
-        deleteFile.delete();
+        if(!oldAvatar.equals("default.png")){
+            File deleteFile = new File(avatarSavePath + "/" + oldAvatar);
+            deleteFile.delete();
+        }
         userDao.updateAvatar(user,fileName);
         userObj.setAvatar(fileName);
         redisUtil.set(token,userObj,1,TimeUnit.DAYS);
