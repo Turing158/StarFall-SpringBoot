@@ -1,12 +1,14 @@
 package com.starfall.config;
 
 import com.starfall.filter.JWTAuthenticationFilter;
+import com.starfall.filter.RoleFilter;
 import com.starfall.impl.AccessDeniedHandlerImpl;
 import com.starfall.impl.AuthenticationEntryPointImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -28,6 +30,12 @@ public class SecurityConfig{
     private AccessDeniedHandlerImpl accessDeniedHandler;
     @Autowired
     private JWTAuthenticationFilter jwtAuthenticationFilter;
+    @Autowired
+    private RoleFilter roleFilter;
+
+    //添加角色管理
+
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -45,11 +53,16 @@ public class SecurityConfig{
                         .anyRequest().authenticated())
                 // 自定义的过滤器
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(roleFilter,JWTAuthenticationFilter.class)
                 .exceptionHandling(exceptionHandling -> exceptionHandling
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler));
         return http.build();
     }
+
+
+
+
 
 
 

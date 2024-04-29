@@ -58,6 +58,7 @@ public class UserService {
             Map<String,Object> claims = new HashMap<>();
             claims.put("USER",user.getUser());
             claims.put("EMAIL",user.getEmail());
+            claims.put("ROLE",user.getRole());
             String token = JwtUtil.generateJwt(claims);
             redisUtil.set(token,user,1, TimeUnit.DAYS);
             return ResultMsg.success(token);
