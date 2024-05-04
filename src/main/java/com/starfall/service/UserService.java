@@ -85,7 +85,8 @@ public class UserService {
                 userObj.getBirthday(),
                 userObj.getExp(),
                 userObj.getLevel(),
-                userObj.getAvatar()
+                userObj.getAvatar(),
+                userObj.getRole()
         );
         return ResultMsg.success(userOut);
     }
@@ -182,7 +183,8 @@ public class UserService {
                         userObj.getBirthday(),
                         userObj.getExp(),
                         userObj.getLevel(),
-                        userObj.getAvatar()
+                        userObj.getAvatar(),
+                        userObj.getRole()
                 );
                 return ResultMsg.success(userOut);
             }

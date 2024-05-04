@@ -18,8 +18,8 @@ public class UserOut {
     int level;
     int maxExp;
     String avatar;
-    String roles;
-    public UserOut(String user, String name, int gender,String email,String birthday,int exp,int level,String avatar){
+    String role;
+    public UserOut(String user, String name, int gender,String email,String birthday,int exp,int level,String avatar,String role){
         this.user = user;
         this.name = name;
         this.gender = gender;
@@ -28,6 +28,7 @@ public class UserOut {
         this.exp = exp;
         this.level = level;
         this.avatar = avatar;
+        this.role = role;
         this.maxExp = Exp.getMaxExp(level);
     }
     public void orderMaxExp(){
