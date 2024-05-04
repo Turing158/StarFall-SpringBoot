@@ -1,4 +1,4 @@
-[**中文**](#Vue3+SpringBoot3搭建以我的世界为主的资源分享论坛) | [**English**](#Building-a-resource-sharing-forum-centered-around-Minecraft-using-Vue3-and-SpringBoot3)
+[**中文**](#Vue3SpringBoot3搭建以我的世界为主的资源分享论坛) | [**English**](#Building-a-resource-sharing-forum-centered-around-Minecraft-using-Vue3-and-SpringBoot3)
 
 ---
 
