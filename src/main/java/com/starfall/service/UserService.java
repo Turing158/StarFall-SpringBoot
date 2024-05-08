@@ -220,7 +220,7 @@ public class UserService {
         return ResultMsg.error("CODE_ERROR");
     }
 
-    @Value("${avatar.sava.path}")
+    @Value("${avatar.save.path}")
     String avatarSavePath = "";
     public ResultMsg settingAvatar(String token,String avatarBase64){
         Claims claims = JwtUtil.parseJWT(token);
@@ -237,6 +237,7 @@ public class UserService {
         if(avatarBase64.startsWith(avatarOutHead)){
             avatarBase64 = avatarBase64.substring(avatarOutHead.length());
         }
+
         byte[] bytes = Base64.getDecoder().decode(avatarBase64);
         for (int i = 0; i < bytes.length; ++i) {
             if (bytes[i] < 0) {// 调整异常数据

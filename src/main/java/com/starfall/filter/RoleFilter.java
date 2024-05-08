@@ -26,7 +26,6 @@ public class RoleFilter extends OncePerRequestFilter {
         if(url.contains("/admin")){
             Claims claims = JwtUtil.parseJWT(token);
             String role = (String) claims.get("ROLE");
-            System.out.println(role);
             if(!"admin".equals(role)){
                 resp.setCharacterEncoding("UTF-8");
                 resp.setContentType("application/json; charset=UTF-8");
