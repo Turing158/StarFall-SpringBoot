@@ -89,7 +89,7 @@ public class AdminUserService {
 
 
 
-    @Value("${avatar.sava.path}")
+    @Value("${avatar.save.path}")
     String avatarSavePath = "";
     public ResultMsg updateAvatar(String user,String avatar){
         if(avatar.equals("default.png")){
