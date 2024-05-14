@@ -21,7 +21,7 @@ public class CacheConfig {
                 for (Object i : params) {
                     sb.append(i);
                 }
-                return null;
+                return sb.toString();
             }
         };
     }
