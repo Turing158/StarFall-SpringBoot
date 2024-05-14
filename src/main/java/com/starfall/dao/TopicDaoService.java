@@ -4,7 +4,6 @@ import org.apache.ibatis.jdbc.SQL;
 
 public class TopicDaoService {
     public String search(String key,String classification,int page){
-//        select * from starfall.topic t join starfall.topicitem ti on t.id = ti.topicId where t.title = #{key}
         return new SQL(){
             {
                 SELECT("t.id," +
