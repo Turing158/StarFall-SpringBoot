@@ -49,8 +49,7 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
         String token = req.getHeader("Authorization");
         if(token == null || token.isEmpty()){
             log.info("token为空，未登录，拒绝访问：{}",url);
-            resp.setCharacterEncoding("UTF-8");
-            resp.setContentType("application/json; charset=UTF-8");
+
             resp.getWriter().write(JsonOperate.toJson(ResultMsg.error("NOT_LOGIN","未登录,请先登录")));
             return;
         }

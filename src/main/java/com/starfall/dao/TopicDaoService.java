@@ -21,7 +21,7 @@ public class TopicDaoService {
                 if(classification.equals("作者")){
                     WHERE("u.name like #{key}");
                 }
-                else if(classification.equals("主题")){
+                if(classification.equals("主题")){
                     WHERE("t.title like #{key}");
                 }
                 else if(classification.equals("内容")){
@@ -58,5 +58,8 @@ public class TopicDaoService {
             }
         }.toString();
     }
+
+
+
 
 }

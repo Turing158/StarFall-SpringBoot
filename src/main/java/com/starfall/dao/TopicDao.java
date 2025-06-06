@@ -47,6 +47,8 @@ public interface TopicDao {
     @Select("select distinct version from starfall.topic order by version desc")
     List<String> findTopicVersion();
 
+
+
     @Select("select * from starfall.comment c join starfall.user u on c.user = u.user where topicid = #{id} order by date limit #{num},10")
     List<CommentOut> findCommentByTopicId(int id, int num);
 
@@ -58,11 +60,13 @@ public interface TopicDao {
 
     @Select("select count(*) from starfall.comment where topicId = #{id}")
     int findCommentCountByTopicId(int id);
+
     @Select("select user from starfall.topic where id = #{id}")
     String findTopicUserBId(int id);
 
     @SelectProvider(type = TopicDaoService.class,method = "search")
     List<Search> searchByKey(String key,String classification,int page);
+    
     @SelectProvider(type = TopicDaoService.class,method = "searchTotal")
     int searchTotalByKey(String key,String classification);
 

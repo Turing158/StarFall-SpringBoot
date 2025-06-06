@@ -154,7 +154,7 @@ public class UserService {
         String emailCodeSession = (String) session.getAttribute("emailCode");
         if(emailCodeSession.equals(code.toUpperCase())){
             userDao.updatePassword(user,aecSecure.encrypt(password));
-            return ResultMsg.success();
+            return ResultMsg.success();  
         }
         return ResultMsg.error("EMAIL_CODE_ERROR");
     }
