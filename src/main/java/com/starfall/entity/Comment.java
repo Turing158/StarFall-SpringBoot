@@ -7,13 +7,15 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+// 用于更改评论时传递旧值的实体
 public class Comment {
-    int topicId;
+    String topicId;
     String user;
     String date;
     String content;
+    int weight;
 
-    int oldTopicId;
+    String oldTopicId;
     String oldUser;
     String oldDate;
 }

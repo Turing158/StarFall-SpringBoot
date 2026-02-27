@@ -9,7 +9,7 @@ import java.io.Serializable;
 @NoArgsConstructor
 @AllArgsConstructor
 public class LikeLog implements Serializable {
-    int topicId;
+    String topicId;
     String user;
     int status;
     String date;

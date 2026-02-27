@@ -1,14 +1,18 @@
 package com.starfall.entity;
 
-import com.starfall.util.Exp;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserOut {
+// 用户输出实体
+public class UserDTO implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     String user;
     String name;
     int gender;
@@ -19,7 +23,7 @@ public class UserOut {
     int maxExp;
     String avatar;
     String role;
-    public UserOut(String user, String name, int gender,String email,String birthday,int exp,int level,String avatar,String role){
+    public UserDTO(String user, String name, int gender, String email, String birthday, int exp, int level, String avatar, String role){
         this.user = user;
         this.name = name;
         this.gender = gender;
@@ -33,5 +37,9 @@ public class UserOut {
     }
     public void orderMaxExp(){
         this.maxExp = Exp.getMaxExp(level);
+    }
+
+    public User toUser(){
+        return new User(user,null,name,gender,email,birthday,exp,level,avatar,role);
     }
 }

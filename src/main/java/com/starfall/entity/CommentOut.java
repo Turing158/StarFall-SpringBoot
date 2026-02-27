@@ -1,6 +1,5 @@
 package com.starfall.entity;
 
-import com.starfall.util.Exp;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -8,10 +7,12 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+// 评论输出实体
 public class CommentOut {
-    int topicId;
+    String topicId;
     String date;
     String content;
+    int weight;
     String user;
     String name;
     String avatar;

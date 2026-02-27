@@ -5,7 +5,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
-import java.util.Set;
 
 @Data
 @NoArgsConstructor
@@ -21,4 +20,10 @@ public class User implements Serializable {
     int level;
     String avatar;
     String role;
+    String createTime;
+    String updateTime;
+
+    public UserDTO toUserDTO(){
+        return new UserDTO(user,name,gender,email,birthday,exp,level,avatar,role);
+    }
 }

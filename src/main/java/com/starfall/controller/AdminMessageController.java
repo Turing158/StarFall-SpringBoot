@@ -14,14 +14,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/admin/chat")
+@RequestMapping("/starfall/console/chat")
 public class AdminMessageController {
     @Autowired
     private AdminMessageService messageService;
 
     @PostMapping("/adminFindAllMessage")
-    public ResultMsg findAllMessage(int page) {
-        return messageService.findAllMessage(page);
+    public ResultMsg findAllMessage(int page,String keyword) {
+        return messageService.findAllMessage(page,keyword);
     }
 
     @PostMapping("/adminInsertMessage")
@@ -45,5 +45,10 @@ public class AdminMessageController {
     @PostMapping("/adminDeleteMessage")
     public ResultMsg deleteMessage(@RequestBody Message message) {
         return messageService.deleteMessage(message);
+    }
+
+    @PostMapping("/adminSendAllUser")
+    public ResultMsg sendAllUser(String msg) {
+        return messageService.sendAllUser(msg);
     }
 }

@@ -2,6 +2,7 @@ package com.starfall.dao;
 
 import org.apache.ibatis.jdbc.SQL;
 
+//    已弃用，搜索功能交给Elasticsearch处理
 public class TopicDaoService {
     public String search(String key,String classification,int page){
         return new SQL(){
@@ -30,8 +31,8 @@ public class TopicDaoService {
                 else{
                     WHERE("t.title like #{key} or u.name like #{key} or ti.content like #{key}");
                 }
-                ORDER_BY("t.date desc");
-                LIMIT("#{page},10");
+                ORDER_BY("t.refresh desc");
+                LIMIT("#{page},20");
             }
         }.toString();
     }
@@ -58,8 +59,5 @@ public class TopicDaoService {
             }
         }.toString();
     }
-
-
-
 
 }

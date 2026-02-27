@@ -3,7 +3,9 @@ package com.starfall.service;
 import com.starfall.dao.AdminNoticeDao;
 import com.starfall.entity.Notice;
 import com.starfall.entity.ResultMsg;
+import com.starfall.util.RedisUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,10 +15,13 @@ public class AdminNoticeService {
 
     @Autowired
     private AdminNoticeDao noticeDao;
+    @Autowired
+    RedisUtil redisUtil;
 
     public ResultMsg findAllNotice(int page) {
         List<Notice> notices = noticeDao.findAllNotice((page-1)*10);
         int count = noticeDao.countNotice();
+        redisUtil.set("notices",notices);
         return ResultMsg.success(notices, count);
     }
 

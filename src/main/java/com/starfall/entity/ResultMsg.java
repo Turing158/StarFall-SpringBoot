@@ -41,7 +41,7 @@ public class ResultMsg {
         return new ResultMsg(msg,object,num);
     }
     public static ResultMsg error(String msg) {
-        return new ResultMsg(msg,"ERROR_ERROR",-1);
+        return new ResultMsg(msg,"UNKNOWN_ERROR",-1);
     }
     public static ResultMsg error(String msg,Object obj) {
         return new ResultMsg(msg,obj,-1);

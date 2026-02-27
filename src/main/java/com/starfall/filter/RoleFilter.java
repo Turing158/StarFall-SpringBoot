@@ -23,7 +23,7 @@ public class RoleFilter extends OncePerRequestFilter {
         String url = req.getRequestURL().toString();
         String token = req.getHeader("Authorization");
 
-        if(url.contains("/admin")){
+        if(url.contains("/starfall/console")){
             Claims claims = JwtUtil.parseJWT(token);
             String role = (String) claims.get("ROLE");
             if(!"admin".equals(role)){

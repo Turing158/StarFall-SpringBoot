@@ -2,32 +2,26 @@ package com.starfall.config;
 
 import com.starfall.filter.JWTAuthenticationFilter;
 import com.starfall.filter.RoleFilter;
-import com.starfall.impl.AccessDeniedHandlerImpl;
-import com.starfall.impl.AuthenticationEntryPointImpl;
+import com.starfall.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(prePostEnabled = true, securedEnabled = true, jsr250Enabled = true)
+@RefreshScope
 public class SecurityConfig{
 
-    @Value("${direct.access.url}")
-    String[] directAccessUrl = {};
     @Autowired
-    private AuthenticationEntryPointImpl authenticationEntryPoint;
-    @Autowired
-    private AccessDeniedHandlerImpl accessDeniedHandler;
+    JwtUtil jwtUtil;
     @Autowired
     private JWTAuthenticationFilter jwtAuthenticationFilter;
     @Autowired
@@ -49,14 +43,12 @@ public class SecurityConfig{
                 .logout(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests((authorize) -> authorize
                         .requestMatchers("/message/**").anonymous()
-                        .requestMatchers(directAccessUrl).anonymous()
+                        .requestMatchers("/file/url/**").anonymous()
+                        .requestMatchers(jwtUtil.getDirectAccessUrl()).anonymous()
                         .anyRequest().authenticated())
                 // 自定义的过滤器
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterAfter(roleFilter,JWTAuthenticationFilter.class)
-                .exceptionHandling(exceptionHandling -> exceptionHandling
-                        .authenticationEntryPoint(authenticationEntryPoint)
-                        .accessDeniedHandler(accessDeniedHandler));
+                .addFilterAfter(roleFilter,JWTAuthenticationFilter.class);
         return http.build();
     }
 

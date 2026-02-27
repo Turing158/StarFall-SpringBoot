@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/admin/notice")
+@RequestMapping("/starfall/console/notice")
 public class AdminNoticeController {
     @Autowired
     private AdminNoticeService noticeService;

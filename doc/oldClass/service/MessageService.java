@@ -2,10 +2,7 @@ package com.starfall.service;
 
 import com.starfall.dao.MessageDao;
 import com.starfall.dao.UserDao;
-import com.starfall.entity.Message;
-import com.starfall.entity.MessageTerm;
-import com.starfall.entity.ResultMsg;
-import com.starfall.entity.User;
+import com.starfall.entity.*;
 import com.starfall.util.*;
 import io.jsonwebtoken.Claims;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +12,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class MessageService {
@@ -23,7 +21,7 @@ public class MessageService {
     @Autowired
     UserDao userDao;
     @Autowired
-    WebSocket webSocket;
+    WebSocketService webSocketService;
     @Autowired
     RedisUtil redisUtil;
 
@@ -88,21 +86,32 @@ public class MessageService {
     }
 
     public ResultMsg SendMessage(String token,String toUser,String content){
+        if (Objects.equals(toUser, "StarFall")){
+            return ResultMsg.error("DISABLE_TO_STARFALL");
+        }
+        if(userDao.existUser(toUser) == 0){
+            return ResultMsg.error("NO_EXIST_USER");
+        }
         Claims claims = JwtUtil.parseJWT(token);
         String fromUser = (String) claims.get("USER");
+        if (Objects.equals(fromUser, toUser)){
+            return ResultMsg.error("DISABLE_TO_SELF");
+        }
         User fromUserObj;
-        if(redisUtil.hasKey(token)){
-            fromUserObj = (User) redisUtil.get(token);
+        if(redisUtil.hasKey("onlineUser:"+token)){
+            fromUserObj = redisUtil.get("onlineUser:"+token, UserOut.class).toUser();
         }
         else{
             fromUserObj = userDao.findByUserOrEmail(fromUser);
         }
         User toUserObj= userDao.findByUserOrEmail(toUser);
         if(fromUserObj != null){
-            LocalDateTime now = LocalDateTime.now();
-            String date = now.getYear()+"-"+ DateUtil.fillZero(now.getMonthValue()+1)+"-"+DateUtil.fillZero(now.getDayOfMonth())+" "+DateUtil.fillZero(now.getHour())+":"+DateUtil.fillZero(now.getMinute())+":"+DateUtil.fillZero(now.getSecond());
+            if(content.contains("[&divide&]")){
+                content = content.replace("[&divide&]"," ");
+            }
+            String date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
             Message message = new Message(fromUser,fromUserObj.getName(),fromUserObj.getAvatar(),toUser,toUserObj.getName(),toUserObj.getAvatar(),date,content);
-            webSocket.sendMessageToUser(toUser, JsonOperate.toJson(message));
+            webSocketService.sendMessageToUser(toUser, JsonOperate.toJson(message));
             List<Message> fromUserMsgs = messageDao.findFromUserMsgByFromUserAndToUser(fromUser,toUser);
             if(fromUserMsgs.isEmpty()){
 //                直接保存新数据
@@ -136,7 +145,7 @@ public class MessageService {
         String fromUser = "test11";
         String toUser = "admin";
         String date = now.getYear()+"-"+(now.getMonthValue()+1)+"-"+now.getDayOfMonth()+" "+now.getHour()+":"+now.getMinute()+":"+now.getSecond();
-        webSocket.sendMessageToUser(toUser, JsonOperate.toJson(new Message(fromUser,null,null,toUser,null,null,date,"Hello,admin")));
+        webSocketService.sendMessageToUser(toUser, JsonOperate.toJson(new Message(fromUser,null,null,toUser,null,null,date,"Hello,admin")));
         return ResultMsg.success();
     }
 }

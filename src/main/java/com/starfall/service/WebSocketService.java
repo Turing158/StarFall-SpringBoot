@@ -1,13 +1,12 @@
-package com.starfall.util;
+package com.starfall.service;
 
-import com.starfall.config.WebSocketConfig;
+import com.starfall.util.JwtUtil;
 import io.jsonwebtoken.Claims;
 import jakarta.websocket.*;
 import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.web.bind.annotation.RequestHeader;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -15,15 +14,22 @@ import java.util.concurrent.CopyOnWriteArraySet;
 @Slf4j
 @Component
 @ServerEndpoint("/message/{user}")
-public class WebSocket {
+public class WebSocketService {
     private Session session;
     private String user;
-    private static CopyOnWriteArraySet<WebSocket> webSocketSet = new CopyOnWriteArraySet<>();
+    private static CopyOnWriteArraySet<WebSocketService> webSocketServiceSet = new CopyOnWriteArraySet<>();
     private static ConcurrentHashMap<String,Session> sessionMap = new ConcurrentHashMap<>();
 
     @OnOpen
     public void onOpen(Session session, @PathParam("user") String token) {
-        Claims claims = JwtUtil.parseJWT(token);
+        Claims claims;
+        try{
+            claims = JwtUtil.parseJWT(token);
+        }catch (Exception e){
+            log.error("token错误");
+            onError(session, e);
+            return;
+        }
         String user = (String) claims.get("USER");
         Session sessionObj = sessionMap.get(user);
         if(sessionObj != null){
@@ -32,16 +38,16 @@ public class WebSocket {
         }
         this.session = session;
         this.user = user;
-        webSocketSet.add(this);
+        webSocketServiceSet.add(this);
         sessionMap.put(user,session);
-        log.info("有新连接加入！当前在线人数为{}", webSocketSet.size());
+        log.info("有新连接加入！当前在线人数为{}", webSocketServiceSet.size());
     }
 
     @OnClose
     public void onClose() {
-        webSocketSet.remove(this);
+        webSocketServiceSet.remove(this);
         sessionMap.remove(user);
-        log.info("有连接关闭！当前在线人数为{}", webSocketSet.size());
+        log.info("有连接关闭！当前在线人数为{}", webSocketServiceSet.size());
     }
 
     @OnMessage
@@ -56,7 +62,7 @@ public class WebSocket {
     }
 
     public void sendMessageAll(String message) {
-        for (WebSocket item : webSocketSet) {
+        for (WebSocketService item : webSocketServiceSet) {
             log.info("广播消息：{}", message);
             item.session.getAsyncRemote().sendText(message);
         }

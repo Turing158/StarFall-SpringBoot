@@ -1,6 +1,5 @@
 package com.starfall.entity;
 
-import com.starfall.util.Exp;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -8,12 +7,16 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+// 主题输出实体
 public class TopicOut {
 
-    int id;
+    String id;
     String title;
     String label;
     String date;
+    int display;
+    String belong;
+    int isFirstPublic;
     int view;
     int comment;
     String topicTitle;
@@ -29,7 +32,6 @@ public class TopicOut {
     String name;
     int exp;
     int level;
-    int maxExp = Exp.getMaxExp(level);
     String avatar;
-    int oldId;
+    int maxExp;
 }

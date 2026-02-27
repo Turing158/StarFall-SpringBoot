@@ -14,20 +14,20 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/admin/user")
+@RequestMapping("/starfall/console/user")
 public class AdminUserController {
     @Autowired
     private AdminUserService userService;
 
 
     @PostMapping("/adminFindAllUsersForSelect")
-    public ResultMsg findAllUsersForSelect() {
-        return userService.findAllUsersForSelect();
+    public ResultMsg findAllUsersForSelect(String keyword) {
+        return userService.findAllUsersForSelect(keyword);
     }
 
     @PostMapping("/adminFindAllUsers")
-    public ResultMsg findAllUsers(int page) {
-        return userService.findAllUsers(page);
+    public ResultMsg findAllUsers(int page,String keyword) {
+        return userService.findAllUsers(page,keyword);
     }
 
     @PostMapping("/adminInsertUser")
@@ -61,8 +61,8 @@ public class AdminUserController {
     }
 
     @PostMapping("/adminFindAllSignIn")
-    public ResultMsg findAllSignIn(int page) {
-        return userService.findAllSignIn(page);
+    public ResultMsg findAllSignIn(int page,String keyword) {
+        return userService.findAllSignIn(page,keyword);
     }
 
     @PostMapping("/adminAppendSignIn")

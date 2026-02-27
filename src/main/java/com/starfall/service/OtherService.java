@@ -5,43 +5,40 @@ import com.starfall.dao.UserDao;
 import com.starfall.entity.ResultMsg;
 import com.starfall.entity.User;
 import com.starfall.util.JwtUtil;
+import com.starfall.util.RedisUtil;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.RequestHeader;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class OtherService {
 
     @Autowired
-    StringRedisTemplate stringRedisTemplate;
-    @Autowired
-    UserDao userDao;
+    RedisUtil redisUtil;
 
-    public void getCodeImage(HttpSession session, HttpServletResponse resp) throws IOException {
+    public void getCodeImage(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         ServletOutputStream sos = resp.getOutputStream();
         GifCaptcha g = new GifCaptcha(100,40,4);
         g.createCode();
-        session.setAttribute("code",g.getCode());
+        String[] params = req.getQueryString().split("&");
+        if(params.length > 1 && StringUtils.hasText(params[1])){
+            redisUtil.delete("code:"+params[1]);
+        }
+        redisUtil.set("code:"+params[0],g.getCode(),60);
+        System.out.println(params[0]+"验证码："+g.getCode());
         g.write(sos);
     }
 
-    public ResultMsg toAdmin( String token){
 
-        Claims claims = JwtUtil.parseJWT(token);
-        String role = (String) claims.get("ROLE");
-        String user = (String) claims.get("USER");
-        User userObj = userDao.findByUserOrEmail(user);
-        if(!(role.equals("admin") || userObj.getRole().equals("admin"))){
-            return ResultMsg.error("NOT_PERMISSION");
-        }
-        return ResultMsg.success();
-    }
 }

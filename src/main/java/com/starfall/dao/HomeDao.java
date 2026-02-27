@@ -1,0 +1,30 @@
+package com.starfall.dao;
+
+import com.starfall.entity.Advertisement;
+import com.starfall.entity.HomeTalk;
+import com.starfall.entity.LiveBroadcast;
+import com.starfall.entity.LiveBroadcastShow;
+import org.apache.ibatis.annotations.*;
+
+import java.util.List;
+
+@Mapper
+public interface HomeDao {
+    @Select("select * from starfall.home_talk join starfall.user u on home_talk.user = u.user order by date desc limit #{num},20")
+    List<HomeTalk> findAllHomeTalk(int num);
+
+    @Select("select * from starfall.home_talk where user=#{user} and date = #{date}")
+    HomeTalk findHomeTalkByUserAndDate(String user,String date);
+
+    @Select("select * from starfall.home_talk h join starfall.user u on h.user = u.user where h.user=#{user} order by date desc limit 0,1")
+    HomeTalk findHomeTalk(String user);
+
+    @Insert("insert into starfall.home_talk values(#{user},#{content},#{date})")
+    int insertHomeTalk(HomeTalk homeTalk);
+
+    @Delete("delete from starfall.home_talk where user=#{user} and date=#{date}")
+    int deleteHomeTalk(String user,String date);
+
+    @Select("select * from starfall.advertisement where position=#{position} order by sequence")
+    List<Advertisement> findAdvertisementByPosition(String position);
+}

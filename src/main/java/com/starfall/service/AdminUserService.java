@@ -1,33 +1,52 @@
 package com.starfall.service;
 
+import com.starfall.dao.AdminHomeDao;
+import com.starfall.dao.AdminMessageDao;
+import com.starfall.dao.AdminTopicDao;
 import com.starfall.dao.AdminUserDao;
+import com.starfall.entity.MultipartFileImpl;
 import com.starfall.entity.ResultMsg;
 import com.starfall.entity.SignIn;
 import com.starfall.entity.User;
-import com.starfall.util.AECSecure;
-import com.starfall.util.DateUtil;
-import com.starfall.util.JwtUtil;
-import io.jsonwebtoken.Claims;
+import com.starfall.util.AECSecureUtil;
+import com.starfall.util.CodeUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.io.*;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 @Service
 public class AdminUserService {
     @Autowired
     private AdminUserDao userDao;
+    @Autowired
+    private FileService fileService;
+    @Autowired
+    private AdminTopicDao topicDao;
+    @Autowired
+    private AdminHomeDao homeDao;
+    @Autowired
+    private AdminMessageDao messageDao;
 
 
-    public ResultMsg findAllUsersForSelect() {
-        List<User> users = userDao.findAllUser();
+    public ResultMsg findAllUsersForSelect(String keyword) {
+        List<User> users;
+        int count;
+        int num = 20;
+        if(keyword == null || keyword.isEmpty()){
+            users = userDao.findAllUser(num);
+            count = userDao.countAllUser();
+        }
+        else{
+            users = userDao.findAllUserByUserOrName("%"+keyword+"%",num);
+            count = userDao.countAllUserByUserOrName("%"+keyword+"%");
+        }
         List<User> newUsers = new ArrayList<>();
         users.forEach(user -> {
             User newUser = new User();
@@ -35,26 +54,26 @@ public class AdminUserService {
             newUser.setName(user.getName());
             newUsers.add(newUser);
         });
-        return ResultMsg.success(newUsers);
+        return ResultMsg.success(newUsers,count);
     }
 
-    public ResultMsg findAllUsers(int page) {
-        List<User> users = userDao.findUserByPage((page-1)*10);
+    public ResultMsg findAllUsers(int page,String keyword) {
+        keyword = "%" + keyword + "%";
+        List<User> users = userDao.findUserByPage((page-1)*10,keyword);
         users.forEach(user -> {
             user.setPassword("***");
         });
-        return ResultMsg.success(users,userDao.countUser());
+        return ResultMsg.success(users,userDao.countUser(keyword));
     }
 
     @Autowired
-    AECSecure aecSecure;
+    AECSecureUtil aecSecureUtil;
 
     public ResultMsg insertUser(User user) {
-        System.out.println(user);
         if(userDao.existUser(user.getUser()) == 0){
             if(userDao.existEmail(user.getEmail()) == 0){
                 user.setAvatar("default.png");
-                user.setPassword(aecSecure.encrypt(user.getPassword()));
+                user.setPassword(aecSecureUtil.encrypt(user.getPassword()));
                 int status = userDao.insertUser(user);
                 return status == 1 ? ResultMsg.success() : ResultMsg.error("DATASOURCE_ERROR");
             }
@@ -68,9 +87,13 @@ public class AdminUserService {
         if(userDao.existUser(oldUser) == 1){
             if(Objects.equals(user.getUser(), oldUser) || userDao.existUser(user.getUser()) == 0){
                 if(Objects.equals(user.getEmail(), oldEmail) || userDao.existEmail(user.getEmail()) == 0){
-                    user.setPassword(aecSecure.encrypt(user.getPassword()));
-                    int status = userDao.updateUser(user,oldUser);
-                    return status == 1 ? ResultMsg.success() : ResultMsg.error("DATASOURCE_ERROR");
+                    if(!user.getPassword().equals("******")){
+                        user.setPassword(aecSecureUtil.encrypt(user.getPassword()));
+                        userDao.updatePassword(user);
+                    }
+                    int status1 = userDao.updateUser(user);
+
+                    return status1 == 1 ? ResultMsg.success() : ResultMsg.error("DATASOURCE_ERROR");
                 }
                 return ResultMsg.error("EMAIL_EXIST");
             }
@@ -82,6 +105,20 @@ public class AdminUserService {
     public ResultMsg deleteUser(String user) {
         if(userDao.existUser(user) == 1){
             int status = userDao.deleteUser(user);
+            userDao.deleteSignInByUser(user);
+            //删除所有有关主题的东西
+            for (String topicId : topicDao.findAllTopicId(user)){
+                topicDao.deleteTopicItemByTopicId(topicId);
+            }
+            topicDao.deleteTopicByUser(user);
+            topicDao.deleteCommentByUser(user);
+            topicDao.deleteLikeLogByUser(user);
+            topicDao.deleteCollectionOnlyUser(user);
+            topicDao.deleteTopicGalleryByUser(user);
+
+            homeDao.deleteHomeTalkByUser(user);
+            messageDao.deleteMessageByUser(user);
+            fileService.removeFolder("user/"+user);
             return status == 1 ? ResultMsg.success() : ResultMsg.error("DATASOURCE_ERROR");
         }
         return ResultMsg.error("USER_NOT_EXIST");
@@ -89,8 +126,6 @@ public class AdminUserService {
 
 
 
-    @Value("${avatar.save.path}")
-    String avatarSavePath = "";
     public ResultMsg updateAvatar(String user,String avatar){
         if(avatar.equals("default.png")){
             userDao.updateAvatar(user,"default.png");
@@ -108,28 +143,21 @@ public class AdminUserService {
                 bytes[i] += 256;
             }
         }
-        LocalDateTime ldt = LocalDateTime.now();
-        String date = ldt.getYear()  + DateUtil.fillZero(ldt.getMonthValue()+1) + DateUtil.fillZero(ldt.getDayOfMonth()) + DateUtil.fillZero(ldt.getHour()) + DateUtil.fillZero(ldt.getMinute()) + DateUtil.fillZero(ldt.getSecond()) + DateUtil.fillZero(ldt.getNano());
-        String avatarName = date + user;
+        String avatarName = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSSS")) + CodeUtil.getCode(6);
         String fileName = avatarName + ".png";
-        try {
-            OutputStream out = new FileOutputStream(avatarSavePath + "/" + fileName);
-            out.write(bytes);
-            out.flush();
-            out.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        String folder = "user/"+user+"/avatar";
+        MultipartFile file = new MultipartFileImpl(bytes,fileName);
+        fileService.upload(file,folder,fileName);
         if(!oldAvatar.equals("default.png")){
-            File deleteFile = new File(avatarSavePath + "/" + oldAvatar);
-            deleteFile.delete();
+            fileService.removeFile(oldAvatar);
         }
-        userDao.updateAvatar(user,fileName);
+        userDao.updateAvatar(user,folder+"/"+fileName);
         return ResultMsg.success(fileName);
     }
 
-    public ResultMsg findAllSignIn(int page){
-        return ResultMsg.success(userDao.findSignInByPage((page-1)*10),userDao.countSignIn());
+    public ResultMsg findAllSignIn(int page,String keyword){
+        keyword = "%" + keyword + "%";
+        return ResultMsg.success(userDao.findSignInByPage((page-1)*10,keyword),userDao.countSignIn(keyword));
     }
 
     public ResultMsg appendSignIn(SignIn signIn){

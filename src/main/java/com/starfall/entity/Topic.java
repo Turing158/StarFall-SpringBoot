@@ -9,7 +9,7 @@ import java.io.Serializable;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Topic implements Serializable {
-    int id;
+    String id;
     String title;
     String label;
     String user;
@@ -19,4 +19,8 @@ public class Topic implements Serializable {
     int view;
     int comment;
     String version;
+    String refresh;
+    int display;
+    String belong;
+    int isFirstPublic;
 }

@@ -1,7 +1,8 @@
 package com.starfall.dao;
 
 import com.starfall.entity.User;
-import com.starfall.entity.UserOut;
+import com.starfall.entity.UserDTO;
+import com.starfall.entity.UserPersonalized;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
@@ -11,36 +12,49 @@ import org.apache.ibatis.annotations.Update;
 public interface UserDao {
     @Select("select count(*) from starfall.user where user = #{user}")
     int existUser(String user);
+
     @Select("select count(*) from starfall.user where email = #{email}")
     int existEmail(String email);
-
 
     @Select("select * from starfall.user where user = #{account} or email = #{account}")
     User findByUserOrEmail(String account);
 
-    @Insert("insert into starfall.user (user, password,name,gender,email,birthday,exp,level,head) " +
-            "values (#{user},#{password},#{name},#{gender},#{email},#{birthday},#{exp},#{level},#{head})")
+    @Select("select * from starfall.user where user = #{user}")
+    UserDTO findByUser(String user);
+
+    @Select("select * from starfall.user_personalized where user = #{user}")
+    UserPersonalized findPersonalizedByUser(String user);
+
+    @Insert("insert into starfall.user (user, password,name,gender,email,birthday,exp,level,avatar,role,create_time,update_time) " +
+            "values (#{user},#{password},#{name},#{gender},#{email},#{birthday},#{exp},#{level},#{avatar},#{role},#{createTime},#{updateTime})")
     int insertUser(User user);
 
-    @Select("select * from starfall.user where user = #{user}")
-    UserOut findByUser(String user);
+    @Insert("insert into starfall.user_personalized (user,signature,online_name,show_online_name,show_collection,show_birthday,show_gender,create_time,update_time)" +
+            "value (#{user},#{signature},#{onlineName},#{showOnlineName},#{showCollection},#{showBirthday},#{showGender},#{createTime},#{updateTime})")
+    int insertPersonalized(UserPersonalized userPersonalized);
 
-    @Update("update starfall.user set exp=#{exp},level = #{level} where user=#{user}")
-    int updateExp(String user,int exp,int level);
+    @Update("update starfall.user set exp=#{exp},level=#{level},update_time=#{updateTime} where user=#{user}")
+    int updateExp(String user,int exp,int level,String updateTime);
 
-    @Update("update starfall.user set avatar=#{avatar} where user=#{user}")
-    int updateAvatar(String user,String avatar);
+    @Update("update starfall.user set avatar=#{avatar},update_time=#{updateTime} where user=#{user}")
+    int updateAvatar(String user,String avatar,String updateTime);
 
-    @Update("update starfall.user set name=#{name},gender=#{gender},birthday=#{birthday} where user=#{user}")
-    int updateInfo(String user,String name,int gender,String birthday);
+    @Update("update starfall.user set name=#{name},gender=#{gender},birthday=#{birthday},update_time=#{updateTime} where user=#{user}")
+    int updateInfo(String user,String name,int gender,String birthday,String updateTime);
 
+    @Update("update starfall.user set password=#{password},update_time=#{updateTime} where user=#{user}")
+    int updatePassword(String user,String password,String updateTime);
 
-    @Update("update starfall.user set password=#{password} where user=#{user}")
-    int updatePassword(String user,String password);
+    @Update("update starfall.user set email=#{email},update_time=#{updateTime} where user=#{user}")
+    int updateEmail(String user,String email,String updateTime);
 
-    @Update("update starfall.user set email=#{email} where user=#{user}")
-    int updateEmail(String user,String email);
+    @Update("update starfall.user_personalized set signature=#{email},update_time=#{updateTime} where user=#{user}")
+    int updateSignature(String user,String signature,String updateTime);
 
-
-
+    @Update("update starfall.user_personalized set " +
+            "online_name=#{onlineName}, show_online_name=#{showOnlineName}," +
+            "show_collection=#{showCollection},show_birthday=#{showBirthday}," +
+            "show_gender=#{showGender},update_time=#{updateTime} " +
+            "where user=#{user}")
+    int updatePersonalized(String user,String onlineName,int showOnlineName,int showCollection,int showBirthday,int showGender,String updateTime);
 }

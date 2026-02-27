@@ -1,4 +1,4 @@
-package com.starfall.util;
+package com.starfall.entity;
 
 public class Exp {
     public static int getMaxExp(int level){

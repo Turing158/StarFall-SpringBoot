@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class LikeItem {
-    int topicId;
+    String topicId;
     String user;
     String name;
     int status;

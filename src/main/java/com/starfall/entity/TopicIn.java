@@ -1,6 +1,5 @@
 package com.starfall.entity;
 
-import com.starfall.util.Exp;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -9,7 +8,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TopicIn {
-    int id;
+    String id;
     String title;
     String label;
     String topicTitle;
@@ -22,4 +21,6 @@ public class TopicIn {
     String download;
     String content;
     String code;
+    int display;
+    String belong;
 }

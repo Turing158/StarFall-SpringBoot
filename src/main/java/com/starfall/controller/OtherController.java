@@ -3,6 +3,7 @@ package com.starfall.controller;
 import com.starfall.entity.ResultMsg;
 import com.starfall.service.OtherService;
 import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +13,7 @@ import javax.imageio.ImageIO;
 import java.io.IOException;
 
 @RestController
+@RequestMapping("/other")
 public class OtherController {
 
     @Autowired
@@ -19,15 +21,10 @@ public class OtherController {
 
     @GetMapping("/getCodeImage")
     public void getCodeImage(
-            HttpSession session,
+            HttpServletRequest req,
             HttpServletResponse resp
     ) throws IOException {
-        otherService.getCodeImage(session,resp);
+        otherService.getCodeImage(req,resp);
     }
 
-
-    @PostMapping("/toAdmin")
-    public ResultMsg toAdmin(@RequestHeader("Authorization") String token){
-        return otherService.toAdmin(token);
-    }
 }

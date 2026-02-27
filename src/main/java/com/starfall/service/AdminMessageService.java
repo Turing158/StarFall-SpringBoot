@@ -12,8 +12,9 @@ public class AdminMessageService {
     @Autowired
     private AdminMessageDao messageDao;
 
-    public ResultMsg findAllMessage(int page) {
-        return ResultMsg.success(messageDao.findAllMessage((page-1)*10),messageDao.countMessage());
+    public ResultMsg findAllMessage(int page,String keyword) {
+        keyword = "%" + keyword + "%";
+        return ResultMsg.success(messageDao.findAllMessage((page-1)*10,keyword),messageDao.countMessage(keyword));
     }
 
     public ResultMsg insertMessage(Message message) {
@@ -42,5 +43,10 @@ public class AdminMessageService {
             return result == 1 ? ResultMsg.success() : ResultMsg.error("DATASOURCE_ERROR");
         }
         return ResultMsg.error("MESSAGE_NOT_EXIST");
+    }
+
+    public ResultMsg sendAllUser(String msg) {
+
+        return ResultMsg.success();
     }
 }

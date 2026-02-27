@@ -9,7 +9,7 @@ import java.io.Serializable;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TopicItem implements Serializable {
-    int topicId;
+    String topicId;
     String topicTitle;
     String enTitle;
     String source;
