@@ -1,7 +1,5 @@
-package com.starfall.entity.admin;
+package com.starfall.entity;
 
-
-import com.starfall.entity.UserNotice;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -9,6 +7,11 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class UserNoticeAdminDTO extends UserNotice {
+public class Medal {
+    String id;
+    String icon;
     String name;
+    String description;
+    String source;
+    String createTime;
 }

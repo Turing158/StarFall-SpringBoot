@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 // 评论输出实体
-public class CommentOut {
+public class CommentVO {
     String topicId;
     String date;
     String content;
@@ -19,4 +19,5 @@ public class CommentOut {
     int level;
     int exp;
     final int maxExp = Exp.getMaxExp(level);
+    String signature;
 }

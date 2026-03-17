@@ -93,7 +93,10 @@ public class UserInteractionController {
     }
 
     @PostMapping("/friend/set/relation")
-    public ResultMsg updateFriendRelation(@RequestHeader("Authorization") String token,String friend,boolean relation){
+    public ResultMsg updateFriendRelation(@RequestHeader("Authorization") String token,String friend,int relation){
+        if(!Arrays.asList(0,1,-1).contains(relation)){
+            throw new ParamException("PARAM_ERROR","好友关系参数错误");
+        }
         userInteractionService.updateFriendRelation(token,friend,relation);
         return ResultMsg.success();
     }

@@ -77,8 +77,8 @@ public class LiveService {
     public ResultMsg updateLiveStatus(String token,String id,String playUid,String reason,boolean status){
         Claims claims = JwtUtil.parseJWT(token);
         String user = (String) claims.get("USER");
-        UserDTO userDTO = userDao.findByUser(user);
-        String role = userDTO.getRole();
+        UserVO userVO = userDao.findByUser(user);
+        String role = userVO.getRole();
         if(!role.equals("admin") && !role.equals("live_moderator")){
             return ResultMsg.error("PERMISSION_DENIED");
         }

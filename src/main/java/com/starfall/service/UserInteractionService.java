@@ -90,6 +90,8 @@ public class UserInteractionService {
         return ResultMsg.success();
     }
 
+
+
     //异步添加通知，并通过websocket推送
     @Transactional
     @Async
@@ -103,6 +105,17 @@ public class UserInteractionService {
         log.info("用户{}的通知{}已插入数据库，准备通过WebSocket推送",user,id);
         log.info("推送内容：{}",JsonOperate.toJson(userNotice));
         webSocketService.sendMessageToUser(user, JsonOperate.toJson(userNotice));
+    }
+
+    //用于其他服务调用查找UserNotice
+    public UserNotice findUserNoticeById(String id){
+        return id != null ? userInteractionDao.findUserNoticeById(id) : null;
+    }
+
+    //用于其他服务调用修改UserNotice
+    @Transactional
+    public int updateNoticeAction(String id,String action){
+        return userInteractionDao.updateUserNoticeAction(id,action);
     }
 
     //好友申请
@@ -133,7 +146,7 @@ public class UserInteractionService {
         }
         LocalDateTime ldt = LocalDateTime.now();
         String id = "fa" + dateUtil.getDateTimeByFormat(ldt,"yyyyMMddHHmmssSSSS") + CodeUtil.getCode(6);
-        UserDTO userObj = userDao.findByUser(user);
+        UserVO userObj = userDao.findByUser(user);
         String action = JsonOperate.toJson(new FriendNoticeAction(id,userObj.getName(),userObj.getUser(),userObj.getAvatar(),reason,0,false),false);
         log.info("生成好友申请通知的action：{}",action);
         insertNotice(friend,UserNoticeType.friend,"新的好友申请",action);
@@ -237,13 +250,7 @@ public class UserInteractionService {
         if(userDao.existUser(toUser) == 0){
             throw new ServiceException("NO_EXIST_USER","用户"+toUser+"不存在");
         }
-        User fromUserObj;
-        if(redisUtil.hasKey("onlineUser:"+token)){
-            fromUserObj = redisUtil.get("onlineUser:"+token, UserDTO.class).toUser();
-        }
-        else{
-            fromUserObj = userDao.findByUserOrEmail(fromUser);
-        }
+        UserVO fromUserObj = getUserObj(token,fromUser);
         if(fromUserObj == null){
             throw new ServiceException("USER_ERROR","用户"+fromUser+"不存在，且token存在伪造问题");
         }
@@ -256,12 +263,12 @@ public class UserInteractionService {
         }
         User toUserObj= userDao.findByUserOrEmail(toUser);
         String date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-        Message message = new Message(fromUser,fromUserObj.getName(),fromUserObj.getAvatar(),toUser,toUserObj.getName(),toUserObj.getAvatar(),date,content);
+        Message message = new Message(fromUser,friendRelation.getAlias() == null || friendRelation.getAlias().isEmpty() ? fromUserObj.getName() : friendRelation.getAlias(),fromUserObj.getAvatar(),toUser,toUserObj.getName(),toUserObj.getAvatar(),date,content);
         List<Message> fromUserMsgs = userInteractionDao.findFromUserMsgByFromUserAndToUser(fromUser,toUser);
         if(fromUserMsgs.isEmpty()){
 //          直接保存新数据
             userInteractionDao.insertMsg(message);
-            return message;
+            return friendRelation.getRelation() == 1 ? message : null;
         }
         Message fromUserMsg = fromUserMsgs.get(0);
         String oldDateTimeStr = fromUserMsg.getDate();
@@ -272,11 +279,11 @@ public class UserInteractionService {
 //          更新
             fromUserMsg.setContent(fromUserMsg.getContent()+"[&divide&]"+content);
             userInteractionDao.updateMsgContent(fromUser,toUser,oldDateTimeStr,fromUserMsg.getContent());
-            return fromUserMsg;
+            return friendRelation.getRelation() == 1 ? fromUserMsg : null;
         }
         // 直接保存新数据
         userInteractionDao.insertMsg(message);
-        return message;
+        return friendRelation.getRelation() == 1 ? message : null;
     }
 
     public FriendRelation handleFriendExist(String token,String friend){
@@ -314,23 +321,34 @@ public class UserInteractionService {
     }
 
     @Transactional
-    public void updateFriendRelation(String token,String friend,boolean relationBool){
-        FriendRelation relation = handleFriendExist(token,friend);
-        if(relation.getRelation() == (relationBool ? -1 : 0)){
+    public void updateFriendRelation(String token,String friend,int relation){
+        FriendRelation friendRelation = handleFriendExist(token,friend);
+        if(friendRelation.getRelation() == relation){
             return;
         }
-        log.info("执行updateFriendRelation:用户{}，friend={},relationBool={}",relation.getFromUser(),friend,relationBool);
+        log.info("执行updateFriendRelation:用户{}，friend={},relation={}",friendRelation.getFromUser(),friend,relation);
         LocalDateTime ldt = LocalDateTime.now();
-        userInteractionDao.updateFriendRelation(relation.getFromUser(),friend,relationBool ? -1 : 0,dateUtil.getDateTimeByFormat(ldt,"yyyy-MM-dd HH:mm:ss"));
+        userInteractionDao.updateFriendRelation(friendRelation.getFromUser(),friend,relation,dateUtil.getDateTimeByFormat(ldt,"yyyy-MM-dd HH:mm:ss"));
     }
 
     @Transactional
     public void deleteFriend(String token,String friend,boolean deleteChatRecord){
         FriendRelation relation = handleFriendExist(token,friend);
         log.info("执行deleteFriend:用户{}，friend={}",relation.getFromUser(),friend);
+        FriendRelation toRelation = userInteractionDao.findFriendRelation(relation.getToUser(), relation.getFromUser());
+        var userObj = getUserObj(token,relation.getFromUser());
         userInteractionDao.deleteFriendRelation(relation.getFromUser(),friend);
         if(deleteChatRecord){
             userInteractionDao.deleteMsgByUserAndFriend(relation.getFromUser(),friend);
         }
+        FriendDeleteNoticeAction friendDeleteNoticeAction = new FriendDeleteNoticeAction(relation.getFromUser(),userObj.getName(),toRelation.getAlias(),deleteChatRecord);
+        insertNotice(relation.getFromUser(),UserNoticeType.friend,"失去了一个好友",JsonOperate.toJson(friendDeleteNoticeAction,false));
+    }
+
+    private UserVO getUserObj(String token,String user){
+        if(redisUtil.hasKey("onlineUser:" + token)){
+            return redisUtil.get("onlineUser:" + token, UserVO.class);
+        }
+        return userDao.findByUserOrEmail(user).toUserVO();
     }
 }

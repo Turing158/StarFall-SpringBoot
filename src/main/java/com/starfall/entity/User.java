@@ -23,7 +23,7 @@ public class User implements Serializable {
     String createTime;
     String updateTime;
 
-    public UserDTO toUserDTO(){
-        return new UserDTO(user,name,gender,email,birthday,exp,level,avatar,role);
+    public UserVO toUserVO(){
+        return new UserVO(user,name,gender,email,birthday,exp,level,avatar,role);
     }
 }

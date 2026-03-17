@@ -2,12 +2,10 @@ package com.starfall.service;
 
 import com.starfall.dao.HomeDao;
 import com.starfall.dao.UserDao;
-import com.starfall.entity.Advertisement;
-import com.starfall.entity.HomeTalk;
-import com.starfall.entity.LiveBroadcast;
-import com.starfall.entity.ResultMsg;
+import com.starfall.entity.*;
 import com.starfall.util.CodeUtil;
 import com.starfall.util.JwtUtil;
+import com.starfall.util.RedisUtil;
 import io.jsonwebtoken.Claims;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -15,13 +13,14 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class HomeService {
     @Autowired
     private HomeDao homeDao;
     @Autowired
-    private UserDao userDao;
+    RedisUtil redisUtil;
 
     public ResultMsg findAllHomeTalk(int num) {
         return ResultMsg.success(homeDao.findAllHomeTalk(num));
@@ -56,7 +55,16 @@ public class HomeService {
         return ResultMsg.error("NOT_EXIST");
     }
 
-    public ResultMsg findAdvertisementByPosition(String position){
-        return ResultMsg.success(homeDao.findAdvertisementByPosition(position));
+    public List<Advertisement> findAdvertisementByPosition(String position){
+        return homeDao.findAdvertisementByPosition(position);
+    }
+
+    public List<Notice> findAllNotice(){
+        if(redisUtil.get("notices", List.class) != null){
+            return redisUtil.get("notices", List.class);
+        }
+        List<Notice> notices = homeDao.findAllNotice();
+        redisUtil.set("notices",notices, 1, TimeUnit.DAYS);
+        return notices;
     }
 }

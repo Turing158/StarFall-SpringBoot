@@ -1,12 +1,14 @@
 package com.starfall.service;
 
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
+import com.starfall.Exception.ServiceException;
 import com.starfall.dao.TopicDao;
 import com.starfall.dao.UserDao;
 import com.starfall.entity.*;
 import com.starfall.entity.Collection;
 import com.starfall.util.*;
 import io.jsonwebtoken.Claims;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -17,16 +19,20 @@ import org.springframework.data.elasticsearch.core.query.HighlightQuery;
 import org.springframework.data.elasticsearch.core.query.highlight.Highlight;
 import org.springframework.data.elasticsearch.core.query.highlight.HighlightField;
 import org.springframework.data.elasticsearch.core.query.highlight.HighlightParameters;
+import org.springframework.data.util.Pair;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 
 @Service
+@Slf4j
 public class TopicService {
     @Autowired
     TopicDao topicDao;
@@ -36,6 +42,8 @@ public class TopicService {
     FileService fileService;
     @Autowired
     SearchService searchService;
+    @Autowired
+    UserService userService;
     @Autowired
     UserInteractionService userInteractionService;
     @Autowired
@@ -188,8 +196,8 @@ public class TopicService {
 
 
     public ResultMsg findCommentByTopicId(String id,int page){
-        List<CommentOut> list = topicDao.findCommentByTopicId(id,(page-1)*10);
-        for (CommentOut item : list){
+        List<CommentVO> list = topicDao.findCommentByTopicId(id,(page-1)*10);
+        for (CommentVO item : list){
             item.setExp(Exp.getMaxExp(item.getLevel()));
         }
         return ResultMsg.success(list,topicDao.findCommentCountByTopicId(id));
@@ -220,7 +228,7 @@ public class TopicService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public ResultMsg appendTopic(String token, TopicIn topicIn){
+    public ResultMsg appendTopic(String token, TopicDTO topicDTO){
         Claims claims = JwtUtil.parseJWT(token);
         String user = (String) claims.get("USER");
         User userObj = userDao.findByUserOrEmail(user);
@@ -231,28 +239,28 @@ public class TopicService {
         if(topicDao.countTopicTotalByDateAndUser(user) >= 10){
             return ResultMsg.error("APPEND_DAY_MAX_ERROR");
         }
-        if(codeUtil.checkCode(topicIn.getCode())){
+        if(codeUtil.checkCode(topicDTO.getCode())){
             LocalDateTime ldt = LocalDateTime.now();
             String id = dateUtil.getDateTimeByFormat(ldt,"yyyyMMddHHmmssSSSS")+ CodeUtil.getCode(6);
             String date = dateUtil.getDateTimeByFormat(ldt,"yyyy-MM-dd HH:mm:ss");
-            if (topicIn.getDisplay() != 0 && topicIn.getDisplay() != 1){
-                topicIn.setDisplay(0);
+            if (topicDTO.getDisplay() != 0 && topicDTO.getDisplay() != 1){
+                topicDTO.setDisplay(0);
             }
             topicDao.insertTopic(
                     id,
-                    topicIn.getTitle(),
-                    topicIn.getLabel(),
+                    topicDTO.getTitle(),
+                    topicDTO.getLabel(),
                     user,
                     date,
-                    topicIn.getVersion(),
+                    topicDTO.getVersion(),
                     dateUtil.getDateTimeByFormat(ldt,"yyyy-MM-dd HH:mm:ss"),
-                    topicIn.getDisplay(),
-                    topicIn.getBelong(),
-                    topicIn.getDisplay() == 1 ? 1 : 0
+                    topicDTO.getDisplay(),
+                    topicDTO.getBelong(),
+                    topicDTO.getDisplay() == 1 ? 1 : 0
             );
             String filename = id+".md";
             String fileFolder = "user/"+user+"/topic/"+id;
-            MultipartFile file = new MultipartFileImpl(topicIn.getContent(),filename);
+            MultipartFile file = new MultipartFileImpl(topicDTO.getContent(),filename);
             try{
                 fileService.upload(file,fileFolder,filename);
             }
@@ -262,33 +270,33 @@ public class TopicService {
             }
             topicDao.insertTopicItem(
                     id,
-                    topicIn.getTopicTitle(),
-                    topicIn.getEnTitle(),
-                    topicIn.getSource(),
-                    topicIn.getAuthor(),
-                    topicIn.getLanguage(),
-                    topicIn.getAddress(),
-                    topicIn.getDownload(),
+                    topicDTO.getTopicTitle(),
+                    topicDTO.getEnTitle(),
+                    topicDTO.getSource(),
+                    topicDTO.getAuthor(),
+                    topicDTO.getLanguage(),
+                    topicDTO.getAddress(),
+                    topicDTO.getDownload(),
                     fileFolder + "/" + filename
             );
             int addExp = 0;
-            if(topicIn.getDisplay() == 1){
+            if(topicDTO.getDisplay() == 1){
                 addExp = addExpFunc(token,100,200,userObj);
             }
             searchService.saveTopic(
                     new Search(
                             id,
-                            topicIn.getTitle(),
-                            topicIn.getLabel(),
-                            topicIn.getBelong(),
-                            topicIn.getTopicTitle(),
-                            topicIn.getEnTitle(),
-                            ContentUtil.parseContent(topicIn.getContent()),
-                            LocalDate.parse(date),
+                            topicDTO.getTitle(),
+                            topicDTO.getLabel(),
+                            topicDTO.getBelong(),
+                            topicDTO.getTopicTitle(),
+                            topicDTO.getEnTitle(),
+                            ContentUtil.parseContent(topicDTO.getContent()),
+                            LocalDate.parse(date.split(" ")[0]),
                             ldt,
                             user,
                             userObj.getName(),
-                            topicIn.getDisplay()
+                            topicDTO.getDisplay()
                     )
             );
             return ResultMsg.success(id,addExp);
@@ -309,11 +317,11 @@ public class TopicService {
             level++;
         }
         userDao.updateExp(user.getUser(),exp,level,dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss"));
-        UserDTO userDTO = user.toUserDTO();
-        userDTO.setExp(exp);
-        userDTO.setLevel(level);
-        userDTO.setMaxExp(Exp.getMaxExp(level));
-        redisUtil.set("onlineUser:"+token, userDTO);
+        UserVO userVO = user.toUserVO();
+        userVO.setExp(exp);
+        userVO.setLevel(level);
+        userVO.setMaxExp(Exp.getMaxExp(level));
+        redisUtil.set("onlineUser:"+token, userVO);
         return addExp;
     }
 
@@ -343,50 +351,55 @@ public class TopicService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public ResultMsg updateTopic(String token,TopicIn topicIn){
+    public ResultMsg updateTopic(String token, TopicDTO topicDTO){
         Claims claims = JwtUtil.parseJWT(token);
         String user = (String) claims.get("USER");
         User userObj = userDao.findByUserOrEmail(user);
-        ResultMsg r = isPromiseToEditTopic(token,topicIn.getId());
+        ResultMsg r = isPromiseToEditTopic(token, topicDTO.getId());
         if(r.getMsg().equals("REJECT")){
             return r;
         }
-        if(codeUtil.checkCode(topicIn.getCode())){
+        if(codeUtil.checkCode(topicDTO.getCode())){
             LocalDateTime ldt = LocalDateTime.now();
             String date = dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss");
-            TopicOut topicOut = topicDao.findTopicInfoById(topicIn.getId());
-            if (topicIn.getDisplay() != 0 && topicIn.getDisplay() != 1){
-                topicIn.setDisplay(0);
-            }
+            TopicOut topicOut = topicDao.findTopicInfoById(topicDTO.getId());
             int isFirstPublic = 1;
             boolean isPublicExp = false;
-            if (topicOut.getIsFirstPublic() == 0){
-                if(topicIn.getDisplay() == 0){
-                    isFirstPublic = 0;
+            if(topicOut.getDisplay() != -1){
+                if (topicDTO.getDisplay() != 0 && topicDTO.getDisplay() != 1){
+                    topicDTO.setDisplay(0);
                 }
-                else{
-                    isPublicExp = true;
+                if (topicOut.getIsFirstPublic() == 0){
+                    if(topicDTO.getDisplay() == 0){
+                        isFirstPublic = 0;
+                    }
+                    else{
+                        isPublicExp = true;
+                    }
                 }
             }
+            else{
+                topicDTO.setDisplay(-1);
+            }
             Topic topic = new Topic(
-                    topicIn.getId(),
-                    topicIn.getTitle(),
-                    topicIn.getLabel(),
+                    topicDTO.getId(),
+                    topicDTO.getTitle(),
+                    topicDTO.getLabel(),
                     user,
                     null,
                     null,
                     isPublicExp ? date : topicOut.getDate(),
                     topicOut.getView(),
                     topicOut.getComment(),
-                    topicIn.getVersion(),
+                    topicDTO.getVersion(),
                     date,
-                    topicIn.getDisplay(),
-                    topicIn.getBelong(),
+                    topicDTO.getDisplay(),
+                    topicDTO.getBelong(),
                     isFirstPublic
             );
-            String filename = topicIn.getId()+".md";
-            String fileFolder = "user/"+user+"/topic/"+topicIn.getId();
-            MultipartFile file = new MultipartFileImpl(topicIn.getContent(),filename);
+            String filename = topicDTO.getId()+".md";
+            String fileFolder = "user/"+user+"/topic/"+ topicDTO.getId();
+            MultipartFile file = new MultipartFileImpl(topicDTO.getContent(),filename);
             try{
                 fileService.upload(file,fileFolder,filename);
             }
@@ -395,17 +408,17 @@ public class TopicService {
                 throw new RuntimeException("UPLOAD_ERROR");
             }
             TopicItem topicItem = new TopicItem(
-                    topicIn.getId(),
-                    topicIn.getTopicTitle(),
-                    topicIn.getEnTitle(),
-                    topicIn.getSource(),
-                    topicIn.getAuthor(),
-                    topicIn.getLanguage(),
-                    topicIn.getAddress(),
-                    topicIn.getDownload(),
+                    topicDTO.getId(),
+                    topicDTO.getTopicTitle(),
+                    topicDTO.getEnTitle(),
+                    topicDTO.getSource(),
+                    topicDTO.getAuthor(),
+                    topicDTO.getLanguage(),
+                    topicDTO.getAddress(),
+                    topicDTO.getDownload(),
                     fileFolder + "/" + filename
             );
-            TopicOut data = topicDao.findTopicInfoById(topicIn.getId());
+            TopicOut data = topicDao.findTopicInfoById(topicDTO.getId());
             if (data == null){
                 return ResultMsg.error("NULL_ERROR");
             }
@@ -417,23 +430,23 @@ public class TopicService {
             int status1 = topicDao.updateTopicExpectCommentAndView(topic);
             int status2 = topicDao.updateTopicItem(topicItem);
             if (data.getDisplay() != -1){
-                topicDao.updateTopicDisplay(topicIn.getDisplay(),topicIn.getId());
+                topicDao.updateTopicDisplay(topicDTO.getDisplay(), topicDTO.getId());
             }
             searchService.saveTopic(new Search(
-                    topicIn.getId(),
-                    topicIn.getTitle(),
-                    topicIn.getLabel(),
-                    topicIn.getBelong(),
-                    topicIn.getTopicTitle(),
-                    topicIn.getEnTitle(),
-                    ContentUtil.parseContent(topicIn.getContent()),
+                    topicDTO.getId(),
+                    topicDTO.getTitle(),
+                    topicDTO.getLabel(),
+                    topicDTO.getBelong(),
+                    topicDTO.getTopicTitle(),
+                    topicDTO.getEnTitle(),
+                    ContentUtil.parseContent(topicDTO.getContent()),
                     LocalDate.parse(topic.getDate()),
                     ldt,
                     userObj.getUser(),
                     userObj.getName(),
                     topic.getDisplay()
             ));
-            return (status1+status2) == 2 ? ResultMsg.success(topicIn.getId(),addExp) : ResultMsg.error("UPDATE_ERROR");
+            return (status1+status2) == 2 ? ResultMsg.success(topicDTO.getId(),addExp) : ResultMsg.error("UPDATE_ERROR");
         }
         return ResultMsg.error("CODE_ERROR");
     }
@@ -540,34 +553,106 @@ public class TopicService {
         }
     }
 
-    public ResultMsg adjustTopicDisplay(String id,String reason,int display,String token){
+    @Transactional
+    public void adjustTopicDisplay(String id,String reason,int display,String token){
+        adjustTopicDisplay(id,reason,display,token,null);
+    }
+
+    @Transactional
+    public void adjustTopicDisplay(String id,String reason,int display,String token,String noticeId){
         Claims claims = JwtUtil.parseJWT(token);
         String user = (String) claims.get("USER");
         User userObj = userDao.findByUserOrEmail(user);
-        if (userObj != null){
-            if (display == -1 || display == 1){
-                TopicOut topic = topicDao.findTopicInfoById(id);
-                if (userObj.getRole().equals("admin")
-                        || (topic.getBelong().equals("resource") && userObj.getRole().equals("resource_moderator"))
-                        || (topic.getBelong().equals("talk") && userObj.getRole().equals("talk_moderator"))
-                ){
-                    topicDao.updateTopicDisplay(display,id);
-                    Search search = new Search();
-                    search.setId(id);
-                    search.setStatus(display);
-                    search.setRefreshTime(LocalDateTime.now());
-                    searchService.saveTopic(search);
-                    TopicNoticeAction topicNoticeAction = new TopicNoticeAction(id,topic.getTitle(),display,user,reason);
-                    userInteractionService.insertNotice(topic.getUser(),UserNoticeType.topic,
-                            "帖子状态有更新",JsonOperate.toJson(topicNoticeAction,false));
+        if(userObj == null){
+            throw new ServiceException("NO_EXIST_USER","用户不存在");
+        }
+        Topic topic = topicDao.findTopicById(id);
+        if(topic == null){
+            throw new ServiceException("NO_EXIST_TOPIC","主题不存在");
+        }
+        if (!(display == -1 || display == 1) ||
+                !(userObj.getRole().equals("admin")
+                || (topic.getBelong().equals("resource") && userObj.getRole().equals("resource_moderator"))
+                || (topic.getBelong().equals("talk") && userObj.getRole().equals("talk_moderator"))
+                )){
+            throw new ServiceException("NO_PERMISSION","没有权限执行此操作");
+        }
+        if(noticeId == null && topic.getDisplay() == display){
+            throw new ServiceException("DONT_DO","不允许这样操作主题");
+        }
+        var notice = userInteractionService.findUserNoticeById(noticeId);
+        if(topic.getDisplay() == -1 && notice != null){
+            LocalDateTime ldt = LocalDateTime.parse(notice.getCreateTime(), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            //判断5分钟之后，才能再次对主题进行审核，防止审核人员恶意反复审核
+            if(ldt.plusMinutes(5).isAfter(LocalDateTime.now())){
+                throw new ServiceException("NOT_AFTER_5_MIN","请仔细审核，5分钟内不能再次审核该帖子");
+            }
+        }
+        if(topic.getDisplay() != display){
+            topicDao.updateTopicDisplay(display,id);
+            Search search = new Search();
+            search.setId(id);
+            search.setStatus(display);
+            search.setRefreshTime(LocalDateTime.now());
+            searchService.saveTopic(search);
+        }
+        if(noticeId != null){
+            updateTopicNoticeActionHandle(notice,user);
+        }
+        TopicNoticeAction topicNoticeAction = new TopicNoticeAction(id,topic.getTitle(),display,user,reason,false);
+        userInteractionService.insertNotice(topic.getUser(),UserNoticeType.topic,
+                "帖子状态有更新",JsonOperate.toJson(topicNoticeAction,false));
 //                    messageService.SendMessage(token,topic.getUser(),
 //                            "您的帖子<a href=\"/topic/detail/"+topic.getId()+"\" target=\"_blank\">"+topic.getTitle()+"</a>已被 <a href=\"/personal/other/"+userObj.getUser()+"\" target=\"_blank\">"+userObj.getName()+"</a> 设置为"+(display == -1 ? " <span style=\"color: darkred;\">待整改</span>" : " <span style=\"color: darkgreen;\">已发布</span>")+" 状态。<br/>原因："+reason );
-                    return ResultMsg.success();
-                }
-            }
-            return ResultMsg.error("NO_PERMISSION");
+
+    }
+
+    @Transactional
+    public void topicRectificationComplete(String noticeId,String topicId,String token){
+        log.info("topicRectificationComplete({},{})",noticeId,topicId);
+        Claims claims = JwtUtil.parseJWT(token);
+        String user = (String) claims.get("USER");
+        Topic topic = topicDao.findTopicById(topicId);
+        if(topic == null){
+            throw new ServiceException("NO_EXIST_TOPIC","帖子不存在");
         }
-        return ResultMsg.error("NO_EXIST_USER");
+        if(!topic.getUser().equals(user)){
+            throw new ServiceException("NO_PERMISSION","没有权限执行此操作");
+        }
+        LocalDateTime refreshLDT = LocalDateTime.parse(topic.getRefresh(), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        if(refreshLDT.plusDays(1).isBefore(LocalDateTime.now())){
+            throw new ServiceException("NOT_AFTER_1_DAY","帖子超过1天未编辑，若已整改编辑，请在完成编辑后1天内并完成整改");
+        }
+        var notice = userInteractionService.findUserNoticeById(noticeId);
+        LocalDateTime noticeLDT = LocalDateTime.parse(notice.getCreateTime(), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        if(noticeLDT.plusMinutes(5).isAfter(LocalDateTime.now())){
+            throw new ServiceException("NOT_BEFORE_5_MIN","请修改帖子后，5分钟后再完成整改");
+
+        }
+        updateTopicNoticeActionHandle(notice,user);
+
+        if(notice == null || !notice.getUser().equals(user)){
+            throw new ServiceException("NO_EXIST_NOTICE","通知不存在");
+        }
+        var action = JsonOperate.toObject(notice.getAction(), TopicNoticeAction.class);
+        if(action.isHandle()){
+            throw new ServiceException("ALREADY_HANDLE","已处理过该通知");
+        }
+        var newAction = new TopicNoticeAction(topic.getId(),topic.getTitle(),0,null,null,false);
+        userInteractionService.insertNotice(action.getOperator(),UserNoticeType.topic,"主题帖已修改通知",JsonOperate.toJson(newAction,false));
+    }
+
+    //异步辅助Topic的操作完成后，更新通知Action的状态，防止重复操作
+    @Async
+    @Transactional
+    public void updateTopicNoticeActionHandle(UserNotice notice,String user){
+        if(notice != null && notice.getUser().equals(user) && notice.getType().equals(UserNoticeType.topic)){
+            var action = JsonOperate.toObject(notice.getAction(), TopicNoticeAction.class);
+            if(!action.isHandle()){
+                action.setHandle(true);
+                userInteractionService.updateNoticeAction(notice.getId(),JsonOperate.toJson(action,false));
+            }
+        }
     }
 
     public ResultMsg findCollectStatus(String id,String token){
@@ -579,17 +664,35 @@ public class TopicService {
         return ResultMsg.success(false);
     }
 
-    public ResultMsg findAllCollection(int page,String token){
-        Claims claims = JwtUtil.parseJWT(token);
-        String user = (String) claims.get("USER");
-        User userObj = userDao.findByUserOrEmail(user);
-        if (userObj != null){
-            List<Topic> topics = topicDao.findCollectByUser(user,(page - 1)*20);
-            return  ResultMsg.success(topics);
+    public Pair<List<Topic>,Integer> findAllUserCollection(int page,String user){
+        UserPersonalized userPersonalized = userService.findRedisUserPersonalized(user);
+        if(userPersonalized == null){
+            throw new ServiceException("NO_EXIST_USER","不存在该用户");
         }
-        return ResultMsg.error("NO_EXIST_USER");
+        if(userPersonalized.getShowCollection() == 0){
+            throw new ServiceException("DISABLED_SHOW","该用户已关闭收藏展示");
+        }
+        return findUserCollections(user,page);
+
     }
 
+    public Pair<List<Topic>,Integer> findAllCollection(int page, String token){
+        Claims claims = JwtUtil.parseJWT(token);
+        String user = (String) claims.get("USER");
+        UserPersonalized userPersonalized = userService.findRedisUserPersonalized(user);
+        if (userPersonalized == null){
+            throw new ServiceException("NO_EXIST_USER","不存在该用户");
+        }
+        return findUserCollections(user,page);
+    }
+
+    private Pair<List<Topic>,Integer> findUserCollections(String user,int page){
+        List<Topic> topics = topicDao.findCollectByUser(user,(page - 1)*20);
+        int count = topicDao.countCollectByUser(user);
+        return Pair.of(topics,count);
+    }
+
+    @Transactional
     public ResultMsg setCollectionStatus(String id,String token){
         Claims claims = JwtUtil.parseJWT(token);
         String user = (String) claims.get("USER");
@@ -609,6 +712,17 @@ public class TopicService {
             return status == 1 ? ResultMsg.success(msg,topicDao.findCollectionTotalById(id)) : ResultMsg.error("ERROR");
         }
         return ResultMsg.error("NO_EXIST_USER");
+    }
+
+    public List<Topic> findOtherCollection(String user,int page){
+        UserPersonalized userPersonalized = userService.findRedisUserPersonalized(user);
+        if(userPersonalized == null){
+            throw new ServiceException("USER_NOT_EXIST","用户不存在");
+        }
+        if(userPersonalized.getShowCollection() != 1){
+            throw new ServiceException("HIDE_COLLECTION","用户隐藏了收藏夹");
+        }
+        return topicDao.findCollectByUser(user,(page - 1)*20);
     }
 
     public ResultMsg findFirstPublicTopic(){
@@ -637,7 +751,8 @@ public class TopicService {
                 return r;
             }
             int total = topicDao.countTopicGalleryByTopicId(id);
-            if(total >= 10){
+            //等级制度：普通用户只能上传5张图片，3级用户可以上传8张图片，5及以上用户可以上传10张图片
+            if(userObj.getLevel() < 3 && total >= 5 || userObj.getLevel() >= 3 && userObj.getLevel() < 5 && total >= 8 || userObj.getLevel() >= 5 && total >= 10){
                 return ResultMsg.error("GALLERY_FULL");
             }
             LocalDateTime ldt = LocalDateTime.now();
@@ -679,23 +794,22 @@ public class TopicService {
         return ResultMsg.error("NO_LOGIN");
     }
 
-    public ResultMsg topTopicComment(CommentOut commentOut,String token){
-        System.out.println(commentOut);
-        ResultMsg r = isPromiseToEditTopic(token, commentOut.getTopicId());
+    public ResultMsg topTopicComment(CommentVO commentVO, String token){
+        ResultMsg r = isPromiseToEditTopic(token, commentVO.getTopicId());
         if(r.getMsg().equals("REJECT")){
             return r;
         }
-        int count = topicDao.findCommentTopCountByTopicId(commentOut.getTopicId());
-        if(commentOut.getWeight() != 0 &&count >= 3){
+        int count = topicDao.findCommentTopCountByTopicId(commentVO.getTopicId());
+        if(commentVO.getWeight() != 0 &&count >= 3){
             return ResultMsg.error("TOP_FULL");
         }
-        Comment comment = topicDao.findCommentByUserAndTopicIdAndDate(commentOut.getUser(),commentOut.getTopicId(),commentOut.getDate());
+        Comment comment = topicDao.findCommentByUserAndTopicIdAndDate(commentVO.getUser(), commentVO.getTopicId(), commentVO.getDate());
         if(comment.getWeight() != 0){
-            int status = topicDao.updateCommentWeight(commentOut.getTopicId(),commentOut.getUser(),commentOut.getDate(),0);
+            int status = topicDao.updateCommentWeight(commentVO.getTopicId(), commentVO.getUser(), commentVO.getDate(),0);
             return status == 1 ? ResultMsg.success(false) : ResultMsg.error("ERROR");
         }
         else{
-            int status = topicDao.updateCommentWeight(commentOut.getTopicId(),commentOut.getUser(),commentOut.getDate(),commentOut.getWeight());
+            int status = topicDao.updateCommentWeight(commentVO.getTopicId(), commentVO.getUser(), commentVO.getDate(), commentVO.getWeight());
             return status == 1 ? ResultMsg.success(true) : ResultMsg.error("ERROR");
         }
     }

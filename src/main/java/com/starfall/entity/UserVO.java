@@ -10,7 +10,7 @@ import java.io.Serializable;
 @NoArgsConstructor
 @AllArgsConstructor
 // 用户输出实体
-public class UserDTO implements Serializable {
+public class UserVO implements Serializable {
     private static final long serialVersionUID = 1L;
 
     String user;
@@ -23,7 +23,7 @@ public class UserDTO implements Serializable {
     int maxExp;
     String avatar;
     String role;
-    public UserDTO(String user, String name, int gender, String email, String birthday, int exp, int level, String avatar, String role){
+    public UserVO(String user, String name, int gender, String email, String birthday, int exp, int level, String avatar, String role){
         this.user = user;
         this.name = name;
         this.gender = gender;
@@ -40,6 +40,6 @@ public class UserDTO implements Serializable {
     }
 
     public User toUser(){
-        return new User(user,null,name,gender,email,birthday,exp,level,avatar,role);
+        return new User(user,null,name,gender,email,birthday,exp,level,avatar,role,null,null);
     }
 }

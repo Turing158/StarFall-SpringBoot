@@ -1,9 +1,6 @@
 package com.starfall.dao;
 
-import com.starfall.entity.Advertisement;
-import com.starfall.entity.HomeTalk;
-import com.starfall.entity.LiveBroadcast;
-import com.starfall.entity.LiveBroadcastShow;
+import com.starfall.entity.*;
 import org.apache.ibatis.annotations.*;
 
 import java.util.List;
@@ -27,4 +24,7 @@ public interface HomeDao {
 
     @Select("select * from starfall.advertisement where position=#{position} order by sequence")
     List<Advertisement> findAdvertisementByPosition(String position);
+
+    @Select("select * from starfall.notice")
+    List<Notice> findAllNotice();
 }

@@ -12,6 +12,7 @@ public class DateUtil {
     public boolean isContinuityOfDate(LocalDate date1, LocalDate date2){
         return date1.plusDays(1).equals(date2);
     }
+
     public String fillZero(int num){
         if(num < 10){
             return "0"+num;
@@ -27,4 +28,10 @@ public class DateUtil {
         return ldt.format(DateTimeFormatter.ofPattern(format));
     }
 
+    public boolean isExpire(String expireTime){
+        return isExpire(LocalDateTime.parse(expireTime, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+    }
+    public boolean isExpire(LocalDateTime expireTime){
+        return LocalDateTime.now().isAfter(expireTime);
+    }
 }

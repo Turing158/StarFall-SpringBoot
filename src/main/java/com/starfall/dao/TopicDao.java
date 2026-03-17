@@ -31,7 +31,11 @@ public interface TopicDao {
     @Select("select count(*) from starfall.topic where label = #{label} and belong = #{belong} and display = 1")
     int findTopicTotalByLabel(String label,String belong);
 
-    @Select("select * from starfall.topic t join starfall.topicitem ti on t.id = ti.topicId join starfall.user u on u.user = t.user where t.id = #{id}")
+    // 这个查询不到用户名称和头像以及主题的详细内容
+    @Select("select * from starfall.topic where id = #{id}")
+    Topic findTopicById(String id);
+
+    @Select("select * from starfall.topic t join starfall.topicitem ti on t.id = ti.topicId left join starfall.user u on u.user = t.user left join starfall.user_personalized up on t.user = up.user where t.id = #{id}")
     TopicOut findTopicInfoById(String id);
 
     @Select("select * from starfall.topic t join starfall.user u on t.user = u.user where u.user = #{user} limit #{num},20")
@@ -86,8 +90,8 @@ public interface TopicDao {
     int deleteTopicItem(String topicId);
 
 //    评论
-    @Select("select * from starfall.comment c join starfall.user u on c.user = u.user where topicid = #{id} order by date limit #{num},10")
-    List<CommentOut> findCommentByTopicId(String id, int num);
+    @Select("select * from starfall.comment c join starfall.user u on c.user = u.user join starfall.user_personalized up on c.user = up.user where topicid = #{id} order by date limit #{num},10")
+    List<CommentVO> findCommentByTopicId(String id, int num);
 
     @Select("select * from starfall.comment where topicId=#{topicId} and user=#{user} and date=#{date}")
     Comment findCommentByUserAndTopicIdAndDate(String user,String topicId,String date);
@@ -136,8 +140,11 @@ public interface TopicDao {
     int deleteLikeLog(String topicId);
 
 //    收藏
-    @Select("select t.id,t.title,t.label,t.user,u.name,u.avatar,t.date,t.view,t.comment,t.version,t.display,t.belong from starfall.collection c left join starfall.topic t on c.topicId = t.id left join starfall.user u on c.user = u.user where c.user = #{user} and t.display = 1 order by c.date desc limit #{num},20")
+    @Select("select t.id,t.title,t.label,tu.user,tu.name,tu.avatar,t.date,t.view,t.comment,t.version,t.display,t.belong from starfall.collection c left join starfall.topic t on c.topicId = t.id left join starfall.user tu on tu.user = t.user left join starfall.user u on c.user = u.user where c.user = #{user} and t.display = 1 order by c.date desc limit #{num},20")
     List<Topic> findCollectByUser(String user,int num);
+
+    @Select("select count(*) from starfall.collection c left join starfall.topic t on c.topicId = t.id where c.user = #{user} and t.display = 1")
+    int countCollectByUser(String user);
 
     @Select("select count(*) from starfall.collection where topicId = #{id}")
     int findCollectionTotalById(String id);

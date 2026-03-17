@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class TopicIn {
+public class TopicDTO {
     String id;
     String title;
     String label;
@@ -20,7 +20,7 @@ public class TopicIn {
     String address;
     String download;
     String content;
-    String code;
     int display;
     String belong;
+    String code;
 }

@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class UserPersonalized {
+public class UserOtherVO extends UserVO {
     String user;
     String signature;
     String onlineName;
@@ -16,6 +16,4 @@ public class UserPersonalized {
     int showBirthday;
     int showGender;
     int showEmail;
-    String createTime;
-    String updateTime;
 }

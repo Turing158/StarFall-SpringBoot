@@ -1,7 +1,7 @@
 package com.starfall.dao;
 
 import com.starfall.entity.User;
-import com.starfall.entity.UserDTO;
+import com.starfall.entity.UserOtherVO;
 import com.starfall.entity.UserPersonalized;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
@@ -19,8 +19,8 @@ public interface UserDao {
     @Select("select * from starfall.user where user = #{account} or email = #{account}")
     User findByUserOrEmail(String account);
 
-    @Select("select * from starfall.user where user = #{user}")
-    UserDTO findByUser(String user);
+    @Select("select * from starfall.user u join starfall.user_personalized up on u.user = up.user where u.user = #{user}")
+    UserOtherVO findByUser(String user);
 
     @Select("select * from starfall.user_personalized where user = #{user}")
     UserPersonalized findPersonalizedByUser(String user);
@@ -29,8 +29,8 @@ public interface UserDao {
             "values (#{user},#{password},#{name},#{gender},#{email},#{birthday},#{exp},#{level},#{avatar},#{role},#{createTime},#{updateTime})")
     int insertUser(User user);
 
-    @Insert("insert into starfall.user_personalized (user,signature,online_name,show_online_name,show_collection,show_birthday,show_gender,create_time,update_time)" +
-            "value (#{user},#{signature},#{onlineName},#{showOnlineName},#{showCollection},#{showBirthday},#{showGender},#{createTime},#{updateTime})")
+    @Insert("insert into starfall.user_personalized (user,signature,online_name,show_online_name,show_collection,show_birthday,show_gender,show_email,create_time,update_time)" +
+            "value (#{user},#{signature},#{onlineName},#{showOnlineName},#{showCollection},#{showBirthday},#{showGender},#{showEmail},#{createTime},#{updateTime})")
     int insertPersonalized(UserPersonalized userPersonalized);
 
     @Update("update starfall.user set exp=#{exp},level=#{level},update_time=#{updateTime} where user=#{user}")
@@ -48,13 +48,14 @@ public interface UserDao {
     @Update("update starfall.user set email=#{email},update_time=#{updateTime} where user=#{user}")
     int updateEmail(String user,String email,String updateTime);
 
-    @Update("update starfall.user_personalized set signature=#{email},update_time=#{updateTime} where user=#{user}")
+    @Update("update starfall.user_personalized set signature=#{signature},update_time=#{updateTime} where user=#{user}")
     int updateSignature(String user,String signature,String updateTime);
 
     @Update("update starfall.user_personalized set " +
             "online_name=#{onlineName}, show_online_name=#{showOnlineName}," +
             "show_collection=#{showCollection},show_birthday=#{showBirthday}," +
-            "show_gender=#{showGender},update_time=#{updateTime} " +
+            "show_gender=#{showGender},show_email=#{showEmail},update_time=#{updateTime} " +
             "where user=#{user}")
-    int updatePersonalized(String user,String onlineName,int showOnlineName,int showCollection,int showBirthday,int showGender,String updateTime);
+    int updatePersonalized(UserPersonalized userPersonalized);
+
 }

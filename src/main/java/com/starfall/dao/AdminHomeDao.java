@@ -18,13 +18,13 @@ public interface AdminHomeDao {
     @Select("select * from starfall.advertisement where id=#{id}")
     Advertisement findAdvertisementById(String id);
 
-    @Insert("insert into starfall.advertisement values(#{id},#{file},#{date},#{link},#{position},#{sequence})")
+    @Insert("insert into starfall.advertisement values(#{id},#{title},#{file},#{date},#{link},#{position},#{sequence})")
     int insertAdvertisement(Advertisement advertisement);
 
     @Delete("delete from starfall.advertisement where id=#{id}")
     int deleteAdvertisement(String id);
 
-    @Update("update starfall.advertisement set link=#{link},date=#{date},sequence=#{sequence} where id=#{id}")
+    @Update("update starfall.advertisement set title=#{title},link=#{link},date=#{date},sequence=#{sequence} where id=#{id}")
     int updateAdvertisement(Advertisement advertisement);
 
     @Select("select * from starfall.home_talk h join starfall.user u on h.user=u.user where h.content like #{keyword} or u.name like #{keyword} or h.user like #{keyword} order by date desc limit #{num},10")

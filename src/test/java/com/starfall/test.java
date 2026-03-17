@@ -4,7 +4,7 @@ import com.starfall.dao.TopicDao;
 import com.starfall.dao.UserDao;
 import com.starfall.entity.User;
 import com.starfall.service.UserService;
-import com.starfall.util.AECSecure;
+import com.starfall.util.AECSecureUtil;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,7 +19,7 @@ public class test {
 
     @Test
     public void testEncrypt(){
-        AECSecure aec = new AECSecure();
+        AECSecureUtil aec = new AECSecureUtil();
         String str = "admin";
         String encrypt = aec.encrypt(str);
         System.out.println(encrypt);
@@ -31,7 +31,7 @@ public class test {
     @Autowired
     UserDao userDao;
     @Autowired
-    AECSecure aecSecure;
+    AECSecureUtil aecSecureUtil;
 
     @Test
     public void testLogin(){
@@ -40,7 +40,7 @@ public class test {
 //        System.out.println(aecSecure.decrypt(password));
         User user = new User();
         user.setUser("StarFall");
-        user.setPassword(aecSecure.encrypt("admin"));
+        user.setPassword(aecSecureUtil.encrypt("admin"));
         userDao.insertUser(user);
     }
 
@@ -48,7 +48,7 @@ public class test {
     TopicDao topicDao;
     @Test
     public void testTopic(){
-        System.out.println(topicDao.findTopicInfoById(1));
+        System.out.println(topicDao.findTopicInfoById("1"));
     }
 
 
@@ -56,17 +56,7 @@ public class test {
     public void insert100comment(){
         Random r = new Random();
         for (int i = 0; i < 100; i++) {
-            System.out.println(topicDao.insertComment(r.nextInt(1,12), "admin", null, "测试评论"+r.nextInt()));
+//            System.out.println(topicDao.insertComment(r.nextInt(1,12), "admin", null, "测试评论"+r.nextInt()));
         }
-    }
-
-    @Test
-    public void testUpdateUser(){
-        System.out.println(userDao.updatePassword("admin", aecSecure.encrypt("admin")));
-    }
-
-    @Test
-    public void testGetComment(){
-        System.out.println(topicDao.findCommentByTopicId(1,0));
     }
 }

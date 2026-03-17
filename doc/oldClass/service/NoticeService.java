@@ -5,8 +5,6 @@ import com.starfall.entity.Notice;
 import com.starfall.entity.ResultMsg;
 import com.starfall.util.RedisUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -24,7 +22,7 @@ public class NoticeService {
             return ResultMsg.success(redisUtil.get("notices", List.class));
         }
         List<Notice> notices = noticeDao.findAllNotice();
-        redisUtil.set("notices",notices, 10, TimeUnit.MINUTES);
+        redisUtil.set("notices",notices, 1, TimeUnit.DAYS);
         return ResultMsg.success(notices);
     }
 }

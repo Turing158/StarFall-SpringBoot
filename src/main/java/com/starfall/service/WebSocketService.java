@@ -46,7 +46,9 @@ public class WebSocketService {
     @OnClose
     public void onClose() {
         webSocketServiceSet.remove(this);
-        sessionMap.remove(user);
+        if(user != null && !user.trim().isEmpty()){
+            sessionMap.remove(user);
+        }
         log.info("有连接关闭！当前在线人数为{}", webSocketServiceSet.size());
     }
 

@@ -4,14 +4,16 @@ import com.starfall.dao.AdminHomeDao;
 import com.starfall.dao.AdminMessageDao;
 import com.starfall.dao.AdminTopicDao;
 import com.starfall.dao.AdminUserDao;
-import com.starfall.entity.MultipartFileImpl;
-import com.starfall.entity.ResultMsg;
-import com.starfall.entity.SignIn;
-import com.starfall.entity.User;
+import com.starfall.entity.*;
+import com.starfall.entity.admin.MedalMapperAdminDTO;
+import com.starfall.entity.admin.UserPersonalizedAdminDTO;
 import com.starfall.util.AECSecureUtil;
 import com.starfall.util.CodeUtil;
+import com.starfall.util.DateUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
@@ -33,6 +35,8 @@ public class AdminUserService {
     private AdminHomeDao homeDao;
     @Autowired
     private AdminMessageDao messageDao;
+    @Autowired
+    DateUtil dateUtil;
 
 
     public ResultMsg findAllUsersForSelect(String keyword) {
@@ -69,11 +73,13 @@ public class AdminUserService {
     @Autowired
     AECSecureUtil aecSecureUtil;
 
+    @Transactional
     public ResultMsg insertUser(User user) {
         if(userDao.existUser(user.getUser()) == 0){
             if(userDao.existEmail(user.getEmail()) == 0){
                 user.setAvatar("default.png");
                 user.setPassword(aecSecureUtil.encrypt(user.getPassword()));
+                userDao.insertPersonalized(new UserPersonalized(user.getUser(),"这个人很懒~ 什么都没留下",null,0,0,0,0,0, user.getCreateTime(), dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss")));
                 int status = userDao.insertUser(user);
                 return status == 1 ? ResultMsg.success() : ResultMsg.error("DATASOURCE_ERROR");
             }
@@ -91,6 +97,7 @@ public class AdminUserService {
                         user.setPassword(aecSecureUtil.encrypt(user.getPassword()));
                         userDao.updatePassword(user);
                     }
+                    user.setUpdateTime(dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss"));
                     int status1 = userDao.updateUser(user);
 
                     return status1 == 1 ? ResultMsg.success() : ResultMsg.error("DATASOURCE_ERROR");
@@ -102,9 +109,11 @@ public class AdminUserService {
         return ResultMsg.error("USER_NOT_EXIST");
     }
 
+    @Transactional
     public ResultMsg deleteUser(String user) {
         if(userDao.existUser(user) == 1){
             int status = userDao.deleteUser(user);
+            userDao.deletePersonalized(user);
             userDao.deleteSignInByUser(user);
             //删除所有有关主题的东西
             for (String topicId : topicDao.findAllTopicId(user)){
@@ -128,7 +137,7 @@ public class AdminUserService {
 
     public ResultMsg updateAvatar(String user,String avatar){
         if(avatar.equals("default.png")){
-            userDao.updateAvatar(user,"default.png");
+            userDao.updateAvatar(user,"default.png",dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss"));
             return ResultMsg.success("default.png");
         }
         User userObj = userDao.findUserByUser(user);
@@ -151,7 +160,7 @@ public class AdminUserService {
         if(!oldAvatar.equals("default.png")){
             fileService.removeFile(oldAvatar);
         }
-        userDao.updateAvatar(user,folder+"/"+fileName);
+        userDao.updateAvatar(user,folder+"/"+fileName,dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss"));
         return ResultMsg.success(fileName);
     }
 
@@ -182,8 +191,62 @@ public class AdminUserService {
         return ResultMsg.error("SIGN_IN_NOT_EXIST");
     }
 
+    public Pair<List<UserPersonalizedAdminDTO>,Integer> findAllPersonalized(int page){
+        return Pair.of(userDao.findAllPersonalized((page-1)*10),userDao.countAllPersonalized());
+    }
 
+    public void updatePersonalized(UserPersonalized userPersonalized){
+        userDao.updatePersonalized(userPersonalized);
+    }
 
+    public Pair<List<MedalMapperAdminDTO>,Integer> findAllMedalMapper(int page){
+        return Pair.of(userDao.findMedalMapperByUser((page-1)*10),userDao.countMedalMapper());
+    }
+
+    @Transactional
+    public void insertMedalMapper(MedalMapper medalMapper) {
+        if(userDao.countMedalMapperByUserAndId(medalMapper.getUser(), medalMapper.getId()) != 0){
+            userDao.updateMedalMapper(medalMapper);
+            return;
+        }
+        if(medalMapper.getExpireTime().trim().isEmpty()){
+            medalMapper.setExpireTime(null);
+        }
+        userDao.insertMedalMapper(medalMapper);
+    }
+
+    @Transactional
+    public void updateMedalMapper(MedalMapper medalMapper) {
+        if(medalMapper.getExpireTime().trim().isEmpty()){
+            medalMapper.setExpireTime(null);
+        }
+        userDao.updateMedalMapper(medalMapper);
+    }
+
+    @Transactional
+    public void deleteMedalMapper(String user,String id) {
+        userDao.deleteMedalMapper(user,id);
+    }
+
+    public Pair<List<Medal>,Integer> findAllMedal(int page) {
+        return Pair.of(userDao.findMedal((page - 1) * 10), userDao.countMedal());
+    }
+
+    @Transactional
+    public void insertMedal(Medal medal) {
+        medal.setId("m"+dateUtil.getDateTimeByFormat("yyyyMMddHHmmssSSSS") + CodeUtil.getCode(4));
+        userDao.insertMedal(medal);
+    }
+
+    @Transactional
+    public void updateMedal(Medal medal) {
+        userDao.updateMedal(medal);
+    }
+
+    @Transactional
+    public void deleteMedal(String id) {
+        userDao.deleteMedal(id);
+    }
 }
 
 

@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class Advertisement {
     String id;
+    String title;
     String file;
     String link;
     String date;

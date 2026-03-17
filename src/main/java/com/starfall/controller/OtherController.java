@@ -13,13 +13,12 @@ import javax.imageio.ImageIO;
 import java.io.IOException;
 
 @RestController
-@RequestMapping("/other")
 public class OtherController {
 
     @Autowired
     OtherService otherService;
 
-    @GetMapping("/getCodeImage")
+    @GetMapping("/code/image/find")
     public void getCodeImage(
             HttpServletRequest req,
             HttpServletResponse resp

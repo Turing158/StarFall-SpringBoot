@@ -1,18 +1,19 @@
 package com.starfall.entity;
 
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class TopicNoticeAction {
+@ToString
+public class MedalNoticeAction {
     String id;
-    String title;
-    int status;
-    String operator;
-    String reason;
-    boolean handle;
+    String medal;
+    String icon;
+    String description;
+    String gainTime;
+    String expireTime;
 }

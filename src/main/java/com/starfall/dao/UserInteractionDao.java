@@ -10,7 +10,7 @@ import java.util.Map;
 public interface UserInteractionDao {
 
     //UserNotice
-    @Select("select * from starfall.user_notice where user = #{user} or type = 'ALL' order by create_time desc limit 1")
+    @Select("select * from starfall.user_notice where (user = #{user}  and status = 0) or type = 'all' order by create_time desc limit 1")
     UserNotice findLastNotice(String user);
 
     @Select("select count(*) from (select 1 from starfall.user_notice where user = #{user} and status = 0 limit 100) as un")
@@ -19,10 +19,10 @@ public interface UserInteractionDao {
     @Select("select * from starfall.user_notice where id = #{id}")
     UserNotice findUserNoticeById(String id);
 
-    @Select("select * from starfall.user_notice where user=#{user} order by create_time desc limit #{index},20")
+    @Select("select * from starfall.user_notice where user=#{user} or type='all' order by create_time desc limit #{index},20")
     List<UserNotice> findAllUserNotice(int index,String user);
 
-    @Select("select count(*) from starfall.user_notice where user=#{user}")
+    @Select("select count(*) from starfall.user_notice where user=#{user} or type='all'")
     int countAllUserNotice(String user);
 
     @Select("select * from starfall.user_notice where user=#{user} and action like #{actionPart} order by create_time desc limit 1")
@@ -31,13 +31,13 @@ public interface UserInteractionDao {
     @Insert("insert into starfall.user_notice (id, user, create_time, title, type, status, action) values (#{id}, #{user}, #{createTime}, #{title}, #{type}, #{status}, #{action})")
      int insertUserNotice(UserNotice userNotice);
 
-    @Update("update starfall.user_notice set status = #{status} where id = #{id}")
+    @Update("update starfall.user_notice set status = #{status} where id = #{id} and type != 'all'")
     int updateUserNoticeStatus(String id, int status);
 
     @UpdateProvider(type = DaoServiceProvider.class, method = "batchUpdateStatus")
     int UpdateBatchUserNotice(List<UserNotice> userNotices);
 
-    @Update("update starfall.user_notice set status = 1 where user = #{user}")
+    @Update("update starfall.user_notice set status = 1 where user = #{user} and type != 'all'")
     int updateUserNoticeStatus1ByUser(String user);
 
     @Update("update starfall.user_notice set action = #{action} where id = #{id}")

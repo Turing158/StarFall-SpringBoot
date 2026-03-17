@@ -43,9 +43,12 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
         String url = req.getRequestURL().toString();
+        String uri = req.getRequestURI();
         String[] directAccessUrl = jwtUtil.getDirectAccessUrl();
         for (int i = 0; i < directAccessUrl.length; i++) {
-            if(url.contains(directAccessUrl[i])){
+            if(uri.equals(directAccessUrl[i])
+                    // 支持路径匹配
+                    || (directAccessUrl[i].contains("/**") && uri.startsWith(directAccessUrl[i].replace("/**","")))){
                 log.info("公共操作::{}", url);
                 filterChain.doFilter(req, resp);
                 return;
