@@ -41,6 +41,4 @@ public class OtherService {
         log.info("{}验证码：{}",params[0],g.getCode());
         g.write(sos);
     }
-
-
 }

@@ -34,7 +34,8 @@ public class UserController {
 
     @PostMapping("/register")
     public ResultMsg register(String user, String password,String email, String emailCode,String code){
-        return userService.register(user,password,email,emailCode,code);
+        userService.register(user,password,email,emailCode,code);
+        return ResultMsg.success();
     }
 
 //    @PostMapping("/getEmailCode")
@@ -65,7 +66,7 @@ public class UserController {
 //    @PostMapping("/updateUserInfo")
     @PostMapping("/info/update")
     public ResultMsg settingInfo(@RequestHeader("Authorization") String token,String name,int gender,String birthday,String code){
-        return userService.settingInfo(token,name,gender,birthday,code);
+        return ResultMsg.success(userService.settingInfo(token,name,gender,birthday,code));
     }
 
 
@@ -177,9 +178,20 @@ public class UserController {
         return ResultMsg.success(medalService.findMedalById(id));
     }
 
+
+    @PostMapping("/minecraft/code/get")
+    public ResultMsg getDeviceCode(@RequestHeader("Authorization") String token) {
+        return ResultMsg.success(userService.getDeviceCode(token));
+    }
+
+    @PostMapping("/minecraft/code/verify")
+    public ResultMsg getMicrosoftToken(@RequestHeader("Authorization") String token,String deviceCode) {
+        return ResultMsg.success(userService.getMicrosoftToken(token,deviceCode));
+    }
+
     @PostMapping("/minecraft/verify")
-    public ResultMsg minecraftVerify(String minecraftToken,String token) {
-//        String info = userService.minecraftVerify(id);
-        return ResultMsg.success();
+    public ResultMsg minecraftVerify(String minecraftToken,@RequestHeader("Authorization") String token) {
+        String info = userService.minecraftVerify(minecraftToken,token);
+        return ResultMsg.success(info);
     }
 }

@@ -1,4 +1,4 @@
-package com.starfall.dao;
+package com.starfall.dao.admin;
 
 import com.starfall.entity.Advertisement;
 import com.starfall.entity.FileStore;

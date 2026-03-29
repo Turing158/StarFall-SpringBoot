@@ -37,4 +37,8 @@ public class TopicOut {
     String avatar;
     int maxExp;
     String signature;
+
+    public Topic parseTopic() {
+        return new Topic(id, title, label, user, name, avatar, date, view, comment, version, refresh, display, belong, isFirstPublic);
+    }
 }

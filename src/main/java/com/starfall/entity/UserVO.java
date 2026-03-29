@@ -35,8 +35,9 @@ public class UserVO implements Serializable {
         this.role = role;
         this.maxExp = Exp.getMaxExp(level);
     }
-    public void orderMaxExp(){
+    public int orderMaxExp(){
         this.maxExp = Exp.getMaxExp(level);
+        return this.maxExp;
     }
 
     public User toUser(){

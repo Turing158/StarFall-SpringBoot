@@ -4,7 +4,7 @@ import com.starfall.dao.TopicDao;
 import com.starfall.dao.UserDao;
 import com.starfall.entity.User;
 import com.starfall.service.UserService;
-import com.starfall.util.AECSecureUtil;
+import com.starfall.util.EncDecUtil;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,9 +19,9 @@ public class test {
 
     @Test
     public void testEncrypt(){
-        AECSecureUtil aec = new AECSecureUtil();
+        EncDecUtil aec = new EncDecUtil();
         String str = "admin";
-        String encrypt = aec.encrypt(str);
+        String encrypt = aec.aesEncrypt(str);
         System.out.println(encrypt);
     }
     @Autowired
@@ -31,7 +31,7 @@ public class test {
     @Autowired
     UserDao userDao;
     @Autowired
-    AECSecureUtil aecSecureUtil;
+    EncDecUtil encDecUtil;
 
     @Test
     public void testLogin(){
@@ -40,7 +40,7 @@ public class test {
 //        System.out.println(aecSecure.decrypt(password));
         User user = new User();
         user.setUser("StarFall");
-        user.setPassword(aecSecureUtil.encrypt("admin"));
+        user.setPassword(encDecUtil.aesEncrypt("admin"));
         userDao.insertUser(user);
     }
 

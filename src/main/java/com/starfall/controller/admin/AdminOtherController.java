@@ -1,9 +1,7 @@
-package com.starfall.controller;
+package com.starfall.controller.admin;
 
-import com.starfall.entity.ResultMsg;
-import com.starfall.service.AdminOtherService;
+import com.starfall.service.admin.AdminOtherService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 

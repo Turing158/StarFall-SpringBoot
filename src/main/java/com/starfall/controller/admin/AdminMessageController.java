@@ -1,8 +1,8 @@
-package com.starfall.controller;
+package com.starfall.controller.admin;
 
 import com.starfall.entity.Message;
 import com.starfall.entity.ResultMsg;
-import com.starfall.service.AdminMessageService;
+import com.starfall.service.admin.AdminMessageService;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

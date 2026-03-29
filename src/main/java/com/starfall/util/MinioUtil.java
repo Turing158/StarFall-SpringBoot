@@ -138,6 +138,15 @@ public class MinioUtil {
         return null;
     }
 
+    public InputStream getFileInputStream(String objectName) throws Exception {
+        // 获取文件的输入流
+        return minioClient.getObject(
+                GetObjectArgs.builder()
+                        .bucket(prop.getBucketName())
+                        .object(objectName)
+                        .build());
+    }
+
     public boolean remove(String fileName) {
         try {
             minioClient.removeObject(RemoveObjectArgs.builder().bucket(prop.getBucketName()).object(fileName).build());

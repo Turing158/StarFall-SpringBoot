@@ -1,6 +1,9 @@
 package com.starfall.util;
 
+import cn.hutool.dfa.SensitiveUtil;
+import com.starfall.Exception.ServiceException;
 import com.starfall.entity.Search;
+import com.starfall.entity.TopicDTO;
 
 import java.lang.reflect.Method;
 
@@ -108,5 +111,57 @@ public class ContentUtil {
         } catch (Exception e) {
             // 如果字段不存在或不是String类型，忽略
         }
+    }
+
+    public static void checkContentSensitive(TopicDTO topicDTO){
+        var sensitiveListTitle = SensitiveUtil.getFoundAllSensitive(topicDTO.getTitle());
+        if(!sensitiveListTitle.isEmpty()){
+            throw new ServiceException("TITLE_SENSITIVE_ERROR","包含敏感词"+sensitiveListTitle);
+        }
+        var sensitiveListTopicTitle = SensitiveUtil.getFoundAllSensitive(topicDTO.getTopicTitle());
+        if(!sensitiveListTopicTitle.isEmpty()){
+            throw new ServiceException("TOPIC_TITLE_SENSITIVE_ERROR","包含敏感词"+sensitiveListTopicTitle);
+        }
+        var sensitiveListEnTitle = SensitiveUtil.getFoundAllSensitive(topicDTO.getEnTitle());
+        if(!sensitiveListEnTitle.isEmpty()){
+            throw new ServiceException("EN_TITLE_SENSITIVE_ERROR","包含敏感词"+sensitiveListEnTitle);
+        }
+        var sensitiveListVersion = SensitiveUtil.getFoundAllSensitive(topicDTO.getVersion());
+        if(!sensitiveListVersion.isEmpty()){
+            throw new ServiceException("VERSION_SENSITIVE_ERROR","包含敏感词"+sensitiveListVersion);
+        }
+        var sensitiveListAuthor = SensitiveUtil.getFoundAllSensitive(topicDTO.getAuthor());
+        if(!sensitiveListAuthor.isEmpty()){
+            throw new ServiceException("AUTHOR_SENSITIVE_ERROR","包含敏感词"+sensitiveListAuthor);
+        }
+        var sensitiveListLanguage = SensitiveUtil.getFoundAllSensitive(topicDTO.getLanguage());
+        if(!sensitiveListLanguage.isEmpty()){
+            throw new ServiceException("LANGUAGE_SENSITIVE_ERROR","包含敏感词"+sensitiveListLanguage);
+        }
+        var sensitiveListAddress = SensitiveUtil.getFoundAllSensitive(topicDTO.getAddress());
+        if(!sensitiveListAddress.isEmpty()){
+            throw new ServiceException("ADDRESS_SENSITIVE_ERROR","包含敏感词"+sensitiveListAddress);
+        }
+        var sensitiveListDownload = SensitiveUtil.getFoundAllSensitive(topicDTO.getDownload());
+        if(!sensitiveListDownload.isEmpty()){
+            throw new ServiceException("DOWNLOAD_SENSITIVE_ERROR","包含敏感词"+sensitiveListDownload);
+        }
+        var sensitiveListContent = SensitiveUtil.getFoundAllSensitive(topicDTO.getContent());
+        if(!sensitiveListContent.isEmpty()){
+            throw new ServiceException("CONTENT_SENSITIVE_ERROR","包含敏感词"+sensitiveListContent);
+        }
+    }
+
+    public static boolean isTextFile(String base64Str) {
+        if(base64Str == null || base64Str.isEmpty()){
+            return false;
+        }
+        byte[] buffer = CodeUtil.getBase64Bytes(base64Str);
+        for (byte b : buffer) {
+            if (b == 0) {
+                return false;  // 发现空字节，判定为二进制
+            }
+        }
+        return true;
     }
 }

@@ -1,4 +1,4 @@
-package com.starfall.dao;
+package com.starfall.dao.admin;
 
 import com.starfall.entity.FriendApplication;
 import com.starfall.entity.FriendRelation;

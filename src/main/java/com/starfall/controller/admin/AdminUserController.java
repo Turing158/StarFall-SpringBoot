@@ -1,7 +1,7 @@
-package com.starfall.controller;
+package com.starfall.controller.admin;
 
 import com.starfall.entity.*;
-import com.starfall.service.AdminUserService;
+import com.starfall.service.admin.AdminUserService;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

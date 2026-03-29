@@ -16,7 +16,8 @@ import java.io.IOException;
 @Component
 public class RoleFilter extends OncePerRequestFilter {
 
-
+    @Autowired
+    JwtUtil jwtUtil;
 
     @Override
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse resp, FilterChain filterChain) throws ServletException, IOException {
@@ -24,7 +25,7 @@ public class RoleFilter extends OncePerRequestFilter {
         String token = req.getHeader("Authorization");
 
         if(url.contains("/starfall/console")){
-            Claims claims = JwtUtil.parseJWT(token);
+            Claims claims = jwtUtil.parseToken(token);
             String role = (String) claims.get("ROLE");
             if(!"admin".equals(role)){
                 resp.setCharacterEncoding("UTF-8");

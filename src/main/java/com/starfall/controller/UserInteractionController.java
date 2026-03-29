@@ -7,6 +7,7 @@ import com.starfall.entity.ResultMsg;
 import com.starfall.entity.UserNotice;
 import com.starfall.entity.UserNoticeType;
 import com.starfall.service.UserInteractionService;
+import com.starfall.service.UserNoticeService;
 import com.starfall.service.WebSocketService;
 import com.starfall.util.JsonOperate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,23 +24,25 @@ public class UserInteractionController {
     @Autowired
     UserInteractionService userInteractionService;
     @Autowired
+    UserNoticeService userNoticeService;
+    @Autowired
     WebSocketService webSocketService;
 
     @PostMapping("/notice/last")
     public ResultMsg findLastNoticeAndUnreadNum(@RequestHeader("Authorization") String token){
-        var pair = userInteractionService.findLastNoticeAndUnreadNum(token);
+        var pair = userNoticeService.findLastNoticeAndUnreadNum(token);
         return ResultMsg.success(pair.getKey(),pair.getValue());
     }
 
     @PostMapping("/notice/all")
     public ResultMsg findAllUserNotice(int index,@RequestHeader("Authorization") String token){
-        var pair = userInteractionService.findAllUserNotice(index, token);
+        var pair = userNoticeService.findAllUserNotice(index, token);
         return ResultMsg.success(pair.getKey(),pair.getValue());
     }
 
     @PostMapping("/notice/mark")
     public ResultMsg markAsRead(@RequestBody List<UserNotice> notices,@RequestHeader("Authorization") String token){
-        userInteractionService.markAsRead(notices, token);
+        userNoticeService.markAsRead(notices, token);
         return ResultMsg.success();
     }
 

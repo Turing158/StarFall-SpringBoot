@@ -1,9 +1,8 @@
-package com.starfall.service;
+package com.starfall.service.admin;
 
-import com.starfall.dao.AdminMessageDao;
+import com.starfall.dao.admin.AdminMessageDao;
 import com.starfall.entity.Message;
 import com.starfall.entity.ResultMsg;
-import com.starfall.entity.SignIn;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

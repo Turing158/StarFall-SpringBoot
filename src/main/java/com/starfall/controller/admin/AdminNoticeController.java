@@ -1,6 +1,6 @@
-package com.starfall.controller;
+package com.starfall.controller.admin;
 
-import com.starfall.service.AdminNoticeService;
+import com.starfall.service.admin.AdminNoticeService;
 import com.starfall.entity.Notice;
 import com.starfall.entity.ResultMsg;
 import org.springframework.beans.factory.annotation.Autowired;

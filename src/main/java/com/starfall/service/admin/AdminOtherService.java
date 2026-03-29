@@ -1,4 +1,4 @@
-package com.starfall.service;
+package com.starfall.service.admin;
 
 import com.starfall.entity.ResultMsg;
 import org.springframework.beans.factory.annotation.Value;

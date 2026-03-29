@@ -1,12 +1,13 @@
-package com.starfall.service;
+package com.starfall.service.admin;
 
 import com.starfall.Exception.AdminServiceException;
-import com.starfall.dao.AdminUserInteractionDao;
+import com.starfall.dao.admin.AdminUserInteractionDao;
 import com.starfall.entity.FriendApplication;
 import com.starfall.entity.FriendRelation;
 import com.starfall.entity.UserNoticeType;
 import com.starfall.entity.admin.FriendRelationAdminVO;
 import com.starfall.entity.admin.UserNoticeAdminVO;
+import com.starfall.service.WebSocketService;
 import com.starfall.util.CodeUtil;
 import com.starfall.util.DateUtil;
 import com.starfall.util.JsonOperate;

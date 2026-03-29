@@ -1,8 +1,7 @@
-package com.starfall.service;
+package com.starfall.service.admin;
 
-import com.starfall.dao.AdminLiveDao;
+import com.starfall.dao.admin.AdminLiveDao;
 import com.starfall.entity.LiveBroadcast;
-import com.starfall.entity.LiveBroadcastHistory;
 import com.starfall.entity.ResultMsg;
 import com.starfall.util.CodeUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,7 +9,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 
 @Service
 public class AdminLiveService {

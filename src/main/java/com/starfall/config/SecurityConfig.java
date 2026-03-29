@@ -2,6 +2,7 @@ package com.starfall.config;
 
 import com.starfall.filter.JWTAuthenticationFilter;
 import com.starfall.filter.RoleFilter;
+import com.starfall.util.EncDecUtil;
 import com.starfall.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
@@ -23,9 +24,11 @@ public class SecurityConfig{
     @Autowired
     JwtUtil jwtUtil;
     @Autowired
-    private JWTAuthenticationFilter jwtAuthenticationFilter;
+    EncDecUtil encDecUtil;
     @Autowired
-    private RoleFilter roleFilter;
+    private JWTAuthenticationFilter jwtAuthenticationFilter;
+//    @Autowired
+//    private RoleFilter roleFilter;
 
     //添加角色管理
 
@@ -47,8 +50,8 @@ public class SecurityConfig{
                         .requestMatchers(jwtUtil.getDirectAccessUrl()).anonymous()
                         .anyRequest().authenticated())
                 // 自定义的过滤器
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterAfter(roleFilter,JWTAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+//                .addFilterAfter(roleFilter,JWTAuthenticationFilter.class);
         return http.build();
     }
 

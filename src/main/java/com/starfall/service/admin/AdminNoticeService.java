@@ -1,11 +1,10 @@
-package com.starfall.service;
+package com.starfall.service.admin;
 
-import com.starfall.dao.AdminNoticeDao;
+import com.starfall.dao.admin.AdminNoticeDao;
 import com.starfall.entity.Notice;
 import com.starfall.entity.ResultMsg;
 import com.starfall.util.RedisUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;

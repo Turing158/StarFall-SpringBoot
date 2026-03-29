@@ -1,4 +1,4 @@
-package com.starfall.controller;
+package com.starfall.controller.admin;
 
 import com.starfall.Exception.ParamException;
 import com.starfall.entity.FriendApplication;
@@ -6,7 +6,7 @@ import com.starfall.entity.FriendRelation;
 import com.starfall.entity.ResultMsg;
 import com.starfall.entity.admin.FriendRelationAdminVO;
 import com.starfall.entity.admin.UserNoticeAdminVO;
-import com.starfall.service.AdminUserInteractionService;
+import com.starfall.service.admin.AdminUserInteractionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;

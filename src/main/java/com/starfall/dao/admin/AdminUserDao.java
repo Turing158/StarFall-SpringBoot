@@ -1,4 +1,4 @@
-package com.starfall.dao;
+package com.starfall.dao.admin;
 
 import com.starfall.entity.*;
 import com.starfall.entity.admin.MedalMapperAdminDTO;

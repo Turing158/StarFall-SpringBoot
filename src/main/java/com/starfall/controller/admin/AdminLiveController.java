@@ -1,8 +1,8 @@
-package com.starfall.controller;
+package com.starfall.controller.admin;
 
 import com.starfall.entity.LiveBroadcast;
 import com.starfall.entity.ResultMsg;
-import com.starfall.service.AdminLiveService;
+import com.starfall.service.admin.AdminLiveService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;

@@ -69,7 +69,7 @@ public interface TopicDao {
 //    int searchTotalByKey(String key,String classification);
 
     @Insert("insert into starfall.topic values (#{id},#{title},#{label},#{user},#{date},0,0,#{version},#{refresh},#{display},#{belong},#{isFirstPublic})")
-    int insertTopic(String id,String title,String label,String user,String date,String version,String refresh,int display,String belong,int isFirstPublic);
+    int insertTopic(Topic topic);
 
     @Insert("insert into starfall.topicitem values (#{topicId},#{subtitle},#{subtitleEn},#{source},#{author},#{language},#{address},#{download},#{content})")
     int insertTopicItem(String topicId,String subtitle,String subtitleEn,String source,String author,String language,String address,String download,String content);
@@ -188,7 +188,7 @@ public interface TopicDao {
     @Select("select count(*) from starfall.topic_file where topicId = #{topicId}")
     int countTopicFileByTopicId(String topicId);
 
-    @Insert("insert into starfall.topic_file values (#{id},#{user},#{topicId},#{uploadDate},#{fileName},#{fileLabel},#{fileSize},#{path})")
+    @Insert("insert into starfall.topic_file values (#{id},#{user},#{topicId},#{uploadDate},#{fileName},#{fileLabel},#{fileSize})")
     int insertTopicFile(TopicFile topicFile);
 
     @Delete("delete from starfall.topic_file where id = #{id}")

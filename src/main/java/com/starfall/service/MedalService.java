@@ -1,11 +1,12 @@
 package com.starfall.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.starfall.Exception.ServiceException;
 import com.starfall.dao.MedalDao;
-import com.starfall.entity.Medal;
-import com.starfall.entity.MedalMapper;
-import com.starfall.entity.MedalNoticeAction;
-import com.starfall.entity.UserNoticeType;
+import com.starfall.dao.UserDao;
+import com.starfall.entity.*;
 import com.starfall.util.DateUtil;
 import com.starfall.util.JsonOperate;
 import com.starfall.util.JwtUtil;
@@ -21,19 +22,23 @@ import java.util.List;
 
 @Service
 @Slf4j
+
 public class MedalService {
     @Autowired
     MedalDao medalDao;
     @Autowired
-    UserInteractionService userInteractionService;
+    UserDao userDao;
+    @Autowired
+    WebSocketService webSocketService;
+    @Autowired
+    UserNoticeService userNoticeService;
     @Autowired
     DateUtil dateUtil;
     @Autowired
     JwtUtil jwtUtil;
 
     public List<MedalMapper> findUserMedalOnMenu(String token){
-        Claims claims = JwtUtil.parseJWT(token);
-        String user = (String) claims.get("USER");
+        String user = jwtUtil.getTokenField(token,"USER");
         return medalDao.findAllByUserLimit(user,0,3);
     }
 
@@ -81,7 +86,6 @@ public class MedalService {
     public void checkAndGainRegisterAlready3year(String user){
         log.info("checkAndGainRegisterAlready3year user:{}",user);
         String id = "m202212051433221234x9y2";
-        log.info("isExistMedal:{}",isExistMedal(user,id));
         if(isExistMedal(user,id)){
             log.info("checkAndGainRegisterAlready3year user:{} 已获得3年注册勋章",user);
             return;
@@ -93,6 +97,41 @@ public class MedalService {
         insertMedalAndNotice(mapper);
     }
 
+    @Async
+    @Transactional
+    public void checkAndGainMinecraftPlayer(String response,String user){
+        log.info("checkAndGainMinecraftPlayer");
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode node = null;
+        try {
+            node = objectMapper.readTree(response);
+        } catch (JsonProcessingException e) {
+            log.info("checkAndGainMinecraftPlayer error:{}",e.getMessage());
+        }
+        String nodeId = node.get("id").asText();
+        String nodeName = node.get("name").asText();
+        userDao.updateOnlineName(user,nodeName,dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss"));
+        String uuid = userDao.findOnlineUuidByUser(user);
+        String userByUuid = userDao.findUserByOnlineUUID(nodeId);
+        if(!(userByUuid == null || uuid == null || uuid.equals(nodeId))){
+            log.info("checkAndGainMinecraftPlayer user:{} 已绑定其他玩家，无法获得正版玩家勋章",user);
+            var noticeAction = new UserTempNotice("无法获取正版玩家勋章","当前账号的UUID已绑定其他用户，无法获得正版玩家勋章，请联系管理员处理!",dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss"));
+            webSocketService.sendMessageToUser(user, JsonOperate.toJson(noticeAction,false));
+            return;
+        }
+        if(uuid == null || uuid.isEmpty()){
+            userDao.updateOnlineUuid(user,nodeId,dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss"));
+        }
+        String id = "m202212251234567890o6p2";
+        if(isExistMedal(user,id)){
+            log.info("checkAndGainMinecraftPlayer user:{} 已获得正版玩家勋章",user);
+            return;
+        }
+        var mapper = getMedalMapper(id,user);
+        insertMedalAndNotice(mapper);
+    }
+
+    @Async
     @Transactional
     public void gainMedal(String id,String user,String expireTime){
         var existMedal = isExistMedal(user,id);
@@ -119,7 +158,7 @@ public class MedalService {
                         medalMapper.getExpireTime()
                 );
         log.info("insertMedalNotice MedalNoticeAction：{}",medalNoticeAction);
-        userInteractionService.insertNotice(
+        userNoticeService.insertNotice(
                 medalMapper.getUser(),
                 UserNoticeType.msg,
                 "恭喜获得 " + medalMapper.getName(),
@@ -144,12 +183,10 @@ public class MedalService {
         return medalMapper;
     }
 
-    @Async
     public void insertMedalAndNotice(MedalMapper medalMapper){
         insertMedalAndNotice(medalMapper,true);
     }
 
-    @Async
     @Transactional
     public void insertMedalAndNotice(MedalMapper medalMapper,boolean isNewGain){
         if(isNewGain){

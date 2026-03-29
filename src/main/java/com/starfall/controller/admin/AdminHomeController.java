@@ -1,9 +1,9 @@
-package com.starfall.controller;
+package com.starfall.controller.admin;
 
 import com.starfall.entity.Advertisement;
 import com.starfall.entity.HomeTalk;
 import com.starfall.entity.ResultMsg;
-import com.starfall.service.AdminHomeService;
+import com.starfall.service.admin.AdminHomeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;

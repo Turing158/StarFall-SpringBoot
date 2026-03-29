@@ -1,5 +1,6 @@
 package com.starfall.service;
 
+import cn.hutool.dfa.SensitiveUtil;
 import com.starfall.Exception.ServiceException;
 import com.starfall.dao.SignInDao;
 import com.starfall.dao.UserDao;
@@ -8,18 +9,23 @@ import com.starfall.util.*;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.http.HttpSession;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.LocalDate;
+import java.net.URI;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 @Service
+@Slf4j
 public class UserService {
     @Autowired
     FileService fileService;
@@ -32,7 +38,7 @@ public class UserService {
     @Autowired
     SignInDao signInDao;
     @Autowired
-    AECSecureUtil aecSecureUtil;
+    EncDecUtil encDecUtil;
     @Autowired
     MailUtil mailUtil;
     @Autowired
@@ -41,6 +47,8 @@ public class UserService {
     CodeUtil codeUtil;
     @Autowired
     DateUtil dateUtil;
+    @Autowired
+    JwtUtil jwtUtil;
 
     public String login(String account, String password,String code) {
         if(!codeUtil.checkCode(code)){
@@ -62,52 +70,48 @@ public class UserService {
 
     private String loginSuccess(String account, String password){
         User user = userDao.findByUserOrEmail(account);
-        if(!user.getPassword().equals(aecSecureUtil.encrypt(password))){
+        if(!user.getPassword().equals(encDecUtil.aesEncrypt(password))){
             throw new ServiceException("PASSWORD_ERROR", "密码错误");
         }
         Map<String,Object> claims = new HashMap<>();
         claims.put("USER",user.getUser());
         claims.put("EMAIL",user.getEmail());
         claims.put("ROLE",user.getRole());
-        String token = JwtUtil.generateJwt(claims);
+        String token = jwtUtil.generateToken(claims);
         medalService.checkAndGainRegisterAlready3year(user.getUser());
         redisUtil.set("onlineUser:" + token,user.toUserVO(),10, TimeUnit.MINUTES);
         return token;
     }
 
     public ResultMsg getUserInfo(String token){
-        Claims claims = JwtUtil.parseJWT(token);
-        String user = (String) claims.get("USER");
+        String user = jwtUtil.getTokenField(token,"USER");
         UserVO userObj = getUserObj(token,user);
         return ResultMsg.success(userObj);
     }
 
     @Transactional
-    public ResultMsg register(String user, String password, String email,String emailCode,String code){
-        System.out.println(code);
-        if(codeUtil.checkCode(code)) {
-            if(userDao.existUser(user) == 0){
-                if(userDao.existEmail(email) == 0){
-                    if(codeUtil.checkEmailCode("regEmailCode:",email,emailCode)) {
-                        AECSecureUtil aecSecureUtil = new AECSecureUtil();
-                        LocalDateTime ldt = LocalDateTime.now();
-                        String date = dateUtil.getDateTimeByFormat(ldt,"yyyy-MM-dd");
-                        String datetime = dateUtil.getDateTimeByFormat(ldt,"yyyy-MM-dd HH:mm:ss");
-                        String name = "新用户"+dateUtil.getDateTimeByFormat(ldt,"yyyyMMdd");
-                        User userObj = new User(user, aecSecureUtil.encrypt(password), name, 0,email, date, 0, 1,"default.png","user",datetime,datetime);
-                        UserPersonalized userPersonalized = new UserPersonalized(user,"这个人很懒，什么都没有留下~",null,1,1,1,1,0,datetime,datetime);
-                        medalService.gainRegisterMedal(user);
-                        userDao.insertUser(userObj);
-                        userDao.insertPersonalized(userPersonalized);
-                        return ResultMsg.success();
-                    }
-                    return ResultMsg.error("EMAIL_CODE_ERROR");
-                }
-                return ResultMsg.error("EMAIL_ERROR");
-            }
-            return ResultMsg.error("USER_ERROR");
+    public void register(String user, String password, String email,String emailCode,String code){
+        if(!codeUtil.checkCode(code)){
+            throw new ServiceException("CODE_ERROR", "验证码错误");
         }
-        return ResultMsg.error("CODE_ERROR");
+        if(userDao.existUser(user) != 0){
+            throw new ServiceException("USER_ERROR", "用户名已存在");
+        }
+        if(userDao.existEmail(email) != 0){
+            throw new ServiceException("EMAIL_ERROR", "邮箱已存在");
+        }
+        if(!codeUtil.checkEmailCode("regEmailCode:",email,emailCode)){
+            throw new ServiceException("EMAIL_CODE_ERROR", "邮箱验证码错误");
+        }
+        LocalDateTime ldt = LocalDateTime.now();
+        String date = dateUtil.getDateTimeByFormat(ldt,"yyyy-MM-dd");
+        String datetime = dateUtil.getDateTimeByFormat(ldt,"yyyy-MM-dd HH:mm:ss");
+        String name = "新用户"+dateUtil.getDateTimeByFormat(ldt,"yyyyMMdd");
+        User userObj = new User(user, encDecUtil.aesEncrypt(password), name, 0,email, date, 0, 1,"default.png","user",datetime,datetime);
+        UserPersonalized userPersonalized = new UserPersonalized(user,"这个人很懒，什么都没有留下~",null,1,1,1,1,0,datetime,datetime);
+        medalService.gainRegisterMedal(user);
+        userDao.insertUser(userObj);
+        userDao.insertPersonalized(userPersonalized);
     }
 
     public ResultMsg getEmailCode(String email,boolean isRegister){
@@ -136,7 +140,7 @@ public class UserService {
                     claims.put("USER",user.getUser());
                     claims.put("EMAIL",user.getEmail());
                     claims.put("CODE",emailCode);
-                    String token = JwtUtil.generateJwt(claims, 300);
+                    String token = jwtUtil.generateToken(claims, 5*60);
                     redisUtil.set("forgetPassword:" + email, token, 5, TimeUnit.MINUTES);
                     return ResultMsg.success(token);
                 }
@@ -149,10 +153,9 @@ public class UserService {
 
     @Transactional
     public ResultMsg forgetPassword(String token,String password){
-        Claims claims = JwtUtil.parseJWT(token);
-        String user = (String) claims.get("USER");
-        String email = (String) claims.get("EMAIL");
-        String code = (String) claims.get("CODE");
+        String user = jwtUtil.getTokenField(token,"USER");
+        String email = jwtUtil.getTokenField(token,"EMAIL");
+        String code = jwtUtil.getTokenField(token,"CODE");
         if(redisUtil.hasKey("forgetPassword:" + email)){
             String redisToken = redisUtil.get("forgetPassword:" + email,String.class);
             redisUtil.delete("forgetPassword:" + email);
@@ -161,38 +164,40 @@ public class UserService {
             }
         }
         if(codeUtil.checkEmailCode("forgetEmailCode:",email,code,true)){
-            userDao.updatePassword(user, aecSecureUtil.encrypt(password), dateUtil.getDateTimeByFormat(LocalDateTime.now(),"yyyy-MM-dd HH:mm:ss"));
+            userDao.updatePassword(user, encDecUtil.aesEncrypt(password), dateUtil.getDateTimeByFormat(LocalDateTime.now(),"yyyy-MM-dd HH:mm:ss"));
             return ResultMsg.success();  
         }
         return ResultMsg.error("EMAIL_CODE_ERROR");
     }
 
     @Transactional
-    public ResultMsg settingInfo(String token,String name,int gender,String birthday,String code){
-        if(codeUtil.checkCode(code)){
-            Claims claims = JwtUtil.parseJWT(token);
-            String user = (String) claims.get("USER");
-            int status = userDao.updateInfo(user,name,gender,birthday, dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss"));
-            if(status == 1){
-                UserVO userObj = userDao.findByUserOrEmail(user).toUserVO();
-                redisUtil.set("onlineUser:" + token,userObj,30, TimeUnit.MINUTES);
-                searchService.saveUserName(user,name);
-                return ResultMsg.success(userObj);
-            }
-            return ResultMsg.error("DATASOURCE_ERROR");
+    public UserVO settingInfo(String token,String name,int gender,String birthday,String code){
+        if(!codeUtil.checkCode(code)){
+            throw new ServiceException("CODE_ERROR", "验证码错误");
         }
-        return ResultMsg.error("CODE_ERROR");
+        var sensitiveWords = SensitiveUtil.getFoundAllSensitive(name);
+        if(!sensitiveWords.isEmpty()){
+            throw new ServiceException("SENSITIVE_ERROR", "用户名包含敏感词");
+        }
+        String user = jwtUtil.getTokenField(token,"USER");
+        int status = userDao.updateInfo(user,name,gender,birthday, dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss"));
+        if(status != 1){
+            throw new ServiceException("DATASOURCE_ERROR", "数据源错误");
+        }
+        UserVO userObj = userDao.findByUserOrEmail(user).toUserVO();
+        redisUtil.set("onlineUser:" + token,userObj,30, TimeUnit.MINUTES);
+        searchService.saveUserName(user,name);
+        return userObj;
     }
 
     @Transactional
     public ResultMsg settingPassword(String token,String oldPassword,String newPassword,String code){
         if(codeUtil.checkCode(code)){
-            Claims claims = JwtUtil.parseJWT(token);
-            String user = (String) claims.get("USER");
+            String user = jwtUtil.getTokenField(token,"USER");
             User userObj = userDao.findByUserOrEmail(user);
-            String encryptOldPassword = aecSecureUtil.encrypt(oldPassword);
+            String encryptOldPassword = encDecUtil.aesEncrypt(oldPassword);
             if(userObj.getPassword().equals(encryptOldPassword)){
-                String encryptNewPassword = aecSecureUtil.encrypt(newPassword);
+                String encryptNewPassword = encDecUtil.aesEncrypt(newPassword);
                 int status = userDao.updatePassword(user,encryptNewPassword, dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss"));
                 if(status == 1){
                     return ResultMsg.success();
@@ -206,8 +211,7 @@ public class UserService {
 
     @Transactional
     public ResultMsg settingAvatar(String token,String avatarBase64){
-        Claims claims = JwtUtil.parseJWT(token);
-        String user = (String) claims.get("USER");
+        String user = jwtUtil.getTokenField(token,"USER");
         UserVO userObj = getUserObj(token,user);
         String oldAvatar = userObj.getAvatar();
         String avatarName = dateUtil.getDateTimeByFormat("yyyyMMddHHmmssSSSS") + CodeUtil.getCode(6);
@@ -220,13 +224,12 @@ public class UserService {
         }
         userDao.updateAvatar(user,folder+"/"+fileName, dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss"));
         userObj.setAvatar(folder+"/"+fileName);
-        redisUtil.set("onlineUser:" + token,userObj,5, TimeUnit.MINUTES);
+        redisUtil.set("onlineUser:" + jwtUtil.parseTokenStr(token) ,userObj,5, TimeUnit.MINUTES);
         return ResultMsg.success(folder+"/"+fileName);
     }
 
     public ResultMsg sendOldEmailCode(String token){
-        Claims claims = JwtUtil.parseJWT(token);
-        String user = (String) claims.get("USER");
+        String user = jwtUtil.getTokenField(token,"USER");
         User userObj = userDao.findByUserOrEmail(user);
         if(redisUtil.getExpire("oldEmailCode:" + userObj.getEmail()) > 4 * 60){
             return ResultMsg.error("SEND_FAST_ERROR");
@@ -239,7 +242,7 @@ public class UserService {
 
 
     public ResultMsg sendNewEmailCode(String token,String email){
-        Claims claims = JwtUtil.parseJWT(token);
+        String user = jwtUtil.getTokenField(token,"USER");
         if(redisUtil.getExpire("oldEmailCode:" + email) > 4 * 60){
             return ResultMsg.error("SEND_FAST_ERROR");
         }
@@ -251,20 +254,19 @@ public class UserService {
 
     @Transactional
     public ResultMsg settingEmail(String token,String newEmail,String oldEmailCode,String newEmailCode){
-        Claims claims = JwtUtil.parseJWT(token);
-        String user = (String) claims.get("USER");
+        String user = jwtUtil.getTokenField(token,"USER");
         User userObj = userDao.findByUserOrEmail(user);
         if(codeUtil.checkEmailCode("oldEmailCode:",userObj.getEmail(),oldEmailCode)){
             if(codeUtil.checkEmailCode("newEmailCode:",newEmail,newEmailCode)){
                 if(userDao.existEmail(newEmail) == 0){
                     int status = userDao.updateEmail(user,newEmail, dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss"));
                     if(status == 1){
-                        UserVO userVO = userDao.findByUser(user);
+                        UserVO userVO = findRedisUser(user).toUserVO();
                         Map<String,Object> newClaims = new HashMap<>();
                         newClaims.put("USER",user);
                         newClaims.put("ROLE", userVO.getRole());
                         newClaims.put("EMAIL",newEmail);
-                        String newToken = JwtUtil.generateJwt(newClaims);
+                        String newToken = jwtUtil.generateToken(newClaims,10*60);
                         redisUtil.deleteBatch("onlineUser:" + token,"oldEmailCode:" + userObj.getEmail(),"newEmailCode:" + newEmail);
                         redisUtil.set("onlineUser:" + newToken, userVO,10 ,TimeUnit.MINUTES);
                         return ResultMsg.success(newToken);
@@ -279,43 +281,23 @@ public class UserService {
     }
 
     public ResultMsg findUserByUser(String user){
-        UserOtherVO userObj = userDao.findByUser(user);
-        if(userObj != null){
-            userObj.orderMaxExp();
-            if(userObj.getShowBirthday() != 1){
-                userObj.setBirthday(null);
-            }
-            if(userObj.getShowOnlineName() != 1){
-                userObj.setOnlineName(null);
-            }
-            if(userObj.getShowGender() != 1){
-                userObj.setGender(-1);
-            }
-            if(userObj.getShowBirthday() != 1){
-                userObj.setBirthday(null);
-            }
-            if(userObj.getShowEmail() != 1){
-                userObj.setEmail(null);
-            }
-            return ResultMsg.success(userObj);
-        }
-        return ResultMsg.error("USER_ERROR");
+        UserOtherVO userObj = new UserOtherVO(findRedisUser(user),findRedisUserPersonalized(user));
+        return ResultMsg.success(userObj);
     }
 
     public ResultMsg exit(HttpSession session,String token){
         try {
-            JwtUtil.parseJWT(token);
+            jwtUtil.parseToken(token);
         } catch (Exception e) {
             return ResultMsg.error("NO_TOKEN");
         }
-        redisUtil.delete("onlineUser:" + token);
+        redisUtil.delete("onlineUser:" + jwtUtil.parseTokenStr(token));
         session.invalidate();
         return ResultMsg.success();
     }
 
     public ResultMsg findAllSignIn(String token,int page){
-        Claims claims = JwtUtil.parseJWT(token);
-        String user = (String) claims.get("USER");
+        String user = jwtUtil.getTokenField(token,"USER");
         List<SignIn> signInList = signInDao.findAllSignInByUser(user,(page-1)*6);
         int count = signInDao.countSignInByUser(user);
         return ResultMsg.success(signInList,count);
@@ -329,17 +311,20 @@ public class UserService {
     }
 
     public ResultMsg checkSignIn(String token){
-        Claims claims = JwtUtil.parseJWT(token);
-        String user = (String) claims.get("USER");
+        String user = jwtUtil.getTokenField(token,"USER");
         return ResultMsg.success(isSignInToday(user),signInDao.countContinualSignIn(user));
     }
 
     @Transactional
     public int signIn(String token,String msg,String emotion){
-        Claims claims = JwtUtil.parseJWT(token);
-        String user = (String) claims.get("USER");
+        String user = jwtUtil.getTokenField(token,"USER");
+        token = jwtUtil.parseTokenStr(token);
         if(isSignInToday(user)){
             throw new ServiceException("SIGNIN_ERROR","今日已签到");
+        }
+        var sensitiveWords = SensitiveUtil.getFoundAllSensitive(msg);
+        if(!sensitiveWords.isEmpty()){
+            throw new ServiceException("SENSITIVE_ERROR","签到内容包含敏感词："+sensitiveWords);
         }
         Random r = new Random();
         int addExp = r.nextInt(50)+20;
@@ -369,7 +354,7 @@ public class UserService {
 
     public ResultMsg isExpire(String token){
         try {
-            JwtUtil.parseJWT(token);
+            jwtUtil.parseToken(token);
         } catch (ExpiredJwtException e) {
             return ResultMsg.error("EXPIRE_TOKEN");
         }
@@ -377,7 +362,7 @@ public class UserService {
     }
 
     public ResultMsg toAdmin( String token){
-        Claims claims = JwtUtil.parseJWT(token);
+        Claims claims = jwtUtil.parseToken(token);
         String role = (String) claims.get("ROLE");
         String user = (String) claims.get("USER");
         User userObj = userDao.findByUserOrEmail(user);
@@ -387,30 +372,20 @@ public class UserService {
         return ResultMsg.success();
     }
 
-    public UserPersonalized findRedisUserPersonalized(String user){
-        UserPersonalized personalized;
-        if(redisUtil.hasKey("personalized:" + user)){
-            personalized = redisUtil.get("personalized:" + user, UserPersonalized.class);
-        }
-        else{
-            personalized = userDao.findPersonalizedByUser(user);
-            redisUtil.set("personalized:" + user, personalized);
-        }
-        return personalized;
-    }
-
     public UserPersonalized findPersonalized(String token){
-        Claims claims = JwtUtil.parseJWT(token);
-        String user = (String) claims.get("USER");
+        String user = jwtUtil.getTokenField(token,"USER");
         return findRedisUserPersonalized(user);
     }
 
     @Transactional
     public void updatePersonalized(String token,UserPersonalizedDTO personalizedDTO){
-        Claims claims = JwtUtil.parseJWT(token);
-        String user = (String) claims.get("USER");
+        String user = jwtUtil.getTokenField(token,"USER");
         if(!codeUtil.checkCode(personalizedDTO.getCode())){
             throw new ServiceException("CODE_ERROR","验证码错误");
+        }
+        var sensitiveWords = SensitiveUtil.getFoundAllSensitive(personalizedDTO.getSignature());
+        if(!sensitiveWords.isEmpty()){
+            throw new ServiceException("SENSITIVE_ERROR","签名包含敏感词："+sensitiveWords);
         }
         UserPersonalized redisPersonalized = findRedisUserPersonalized(user);
         UserPersonalized personalized = personalizedDTO.toUserPersonalized();
@@ -423,10 +398,13 @@ public class UserService {
 
     @Transactional
     public void updateSignature(String token,String signature,String code){
-        Claims claims = JwtUtil.parseJWT(token);
-        String user = (String) claims.get("USER");
+        String user = jwtUtil.getTokenField(token,"USER");
         if(!codeUtil.checkCode(code)){
             throw new ServiceException("CODE_ERROR","验证码错误");
+        }
+        var sensitiveWords = SensitiveUtil.getFoundAllSensitive(signature);
+        if(!sensitiveWords.isEmpty()){
+            throw new ServiceException("SENSITIVE_ERROR","签名包含敏感词："+sensitiveWords);
         }
         UserPersonalized redisPersonalized = findRedisUserPersonalized(user);
         redisPersonalized.setSignature(signature);
@@ -436,9 +414,114 @@ public class UserService {
     }
 
     private UserVO getUserObj(String token,String user){
+        token = jwtUtil.parseTokenStr(token);
         if(redisUtil.hasKey("onlineUser:" + token)){
             return redisUtil.get("onlineUser:" + token, UserVO.class);
         }
-        return userDao.findByUserOrEmail(user).toUserVO();
+        var userObj = userDao.findByUserOrEmail(user).toUserVO();
+        redisUtil.set("onlineUser:" + token,userObj,10 ,TimeUnit.MINUTES);
+        return userObj;
+    }
+
+    @Autowired
+    RestTemplate restTemplate;
+    String clientId = "95daccaa-315e-436a-828e-dcad1e99d0e6";
+
+    public String getDeviceCode(String token){
+
+        if(redisUtil.hasKey("minecraft:getDeviceCode:"+token)){
+            throw new ServiceException("ALREADY_GET","以获取过验证信息，请1分钟后再试");
+        }
+        redisUtil.set("minecraft:getDeviceCode:"+token,true,1,TimeUnit.MINUTES);
+//        POST/GET https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode
+        String url = "https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode";
+        MultiValueMap<String,String> body = new LinkedMultiValueMap<>();
+        body.add("client_id",clientId);
+        body.add("scope","XboxLive.signin offline_access");
+        ResponseEntity<String> response = restTemplate.postForEntity(url,body,String.class);
+        return response.getBody();
+    }
+
+    public String getMicrosoftToken(String token,String deviceCode) {
+//        POST https://login.microsoftonline.com/consumers/oauth2/v2.0/token
+        String url = "https://login.microsoftonline.com/consumers/oauth2/v2.0/token";
+        Map<String,String> headers = new HashMap<>();
+        headers.put("Content-Type","application/x-www-form-urlencoded");
+        MultiValueMap<String,String> body = new LinkedMultiValueMap<>();
+        body.add("client_id",clientId);
+        body.add("grant_type","urn:ietf:params:oauth:grant-type:device_code");
+        body.add("device_code",deviceCode);
+        try{
+            ResponseEntity<String> response = restTemplate.postForEntity(url,body,String.class,headers);
+            return response.getBody();
+        }
+        catch (Exception e){
+            if(e.getMessage().contains("authorization_pending")){
+                throw new ServiceException("AUTHORIZATION_PENDING","请先完成授权");
+            }
+            else if(e.getMessage().contains("slow_down")){
+                throw new ServiceException("SLOW_DOWN","请求过于频繁，请稍后再试");
+            }
+            else{
+                log.info("getMicrosoftToken error:{}",e.getMessage());
+                throw new ServiceException("GET_TOKEN_ERROR","获取token失败");
+            }
+        }
+    }
+
+    public String minecraftVerify(String minecraftToken,String token) {
+        log.info("minecraftVerify minecraftToken:{}",minecraftToken);
+        String user = jwtUtil.getTokenField(token,"USER");
+//        GET https://api.minecraftservices.com/minecraft/profile
+        String url = "https://api.minecraftservices.com/minecraft/profile";
+        RequestEntity<Void> requestEntity = RequestEntity
+                .get(URI.create(url))
+                .header("Authorization", "Bearer " + minecraftToken)
+                .build();
+        String response ;
+        try{
+            response = restTemplate.exchange(requestEntity,String.class).getBody();
+        }
+        catch (Exception e){
+            if(e.getMessage().contains("/minecraft/profile")){
+                throw new ServiceException("VERIFY_FAILED","验证失败，请检查token是否正确");
+            }
+            throw new ServiceException("VERIFY_ERROR","验证失败，请稍后再试");
+        }
+        medalService.checkAndGainMinecraftPlayer(response,user);
+        log.info("minecraftVerify success:{}",user);
+        return response;
+    }
+
+    //辅助函数，不作为接口
+    public UserPersonalized findRedisUserPersonalized(String user){
+        UserPersonalized personalized;
+        if(redisUtil.hasKey("personalized:" + user)){
+            personalized = redisUtil.get("personalized:" + user, UserPersonalized.class);
+        }
+        else{
+            personalized = userDao.findPersonalizedByUser(user);
+            redisUtil.set("personalized:" + user, personalized);
+        }
+        return personalized;
+    }
+
+    public User findRedisUser(String user){
+        User userObj;
+        if(redisUtil.hasKey("user:" + user)){
+            userObj = redisUtil.get("user:" + user, User.class);
+        }
+        else{
+            userObj = userDao.findByUserOrEmail(user);
+            redisUtil.set("user:" + userObj.getUser(), userObj, 30 ,TimeUnit.MINUTES);
+        }
+        return userObj;
+    }
+
+    public boolean existUser(String user){
+        if(redisUtil.hasKey("user:" + user)){
+            return true;
+        }
+        return userDao.existUser(user) >= 1;
     }
 }

@@ -1,8 +1,8 @@
-package com.starfall.controller;
+package com.starfall.controller.admin;
 
 
 import com.starfall.entity.*;
-import com.starfall.service.AdminTopicService;
+import com.starfall.service.admin.AdminTopicService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;

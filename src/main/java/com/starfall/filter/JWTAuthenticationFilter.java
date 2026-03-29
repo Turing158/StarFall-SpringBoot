@@ -2,8 +2,10 @@ package com.starfall.filter;
 
 import com.starfall.Exception.NotLoginException;
 import com.starfall.entity.ResultMsg;
+import com.starfall.util.EncDecUtil;
 import com.starfall.util.JsonOperate;
 import com.starfall.util.JwtUtil;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -32,13 +34,15 @@ import java.io.IOException;
 public class JWTAuthenticationFilter extends OncePerRequestFilter {
     @Autowired
     JwtUtil jwtUtil;
+    @Autowired
+    EncDecUtil encDecUtil;
 
     @Override
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse resp, FilterChain filterChain) throws ServletException, IOException {
 //        解决options请求跨域不放行问题
         resp = jwtUtil.handleResponse(req,resp);
         if (HttpMethod.OPTIONS.toString().equals(req.getMethod())){
-            log.info("OPTIONS请求，放行");
+//            log.info("OPTIONS请求，放行");
             resp.setStatus(HttpStatus.NO_CONTENT.value());
             return;
         }
@@ -49,26 +53,34 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
             if(uri.equals(directAccessUrl[i])
                     // 支持路径匹配
                     || (directAccessUrl[i].contains("/**") && uri.startsWith(directAccessUrl[i].replace("/**","")))){
-                log.info("公共操作::{}", url);
+//                log.info("公共操作:{}", url);
                 filterChain.doFilter(req, resp);
                 return;
             }
         }
         String token = req.getHeader("Authorization");
+        if(token == null || token.isEmpty() || !token.startsWith("Bearer ")){
+            log.info("【JWT认证Filter】Authorization header为空，未登录，拒绝访问：{}",url);
+            throw new NotLoginException("NOT_LOGIN");
+        }
+
+        Claims claims = null;
         if(token == null || token.isEmpty()){
-            log.info("token为空，未登录，拒绝访问：{}",url);
+            log.info("【JWT认证Filter】token为空，未登录，拒绝访问：{}",url);
             throw new NotLoginException("NOT_LOGIN");
         }
         else{
             try {
-                JwtUtil.parseJWT(token);
+                claims = jwtUtil.parseToken(token);
             } catch (Exception e) {
-                log.info("token解析失败，未登录,拒绝访问：{}",url);
+                e.printStackTrace();
+                log.info("【JWT认证Filter】token解析失败，未登录,拒绝访问：{}",url);
                 throw new NotLoginException("NOT_LOGIN");
             }
         }
         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(token, null, null);
         SecurityContextHolder.getContext().setAuthentication(authentication);
+        log.info("【JWT认证Filter】用户：{} 角色：{} 访问 :{}",claims.get("USER"),claims.get("ROLE"),url);
         filterChain.doFilter(req, resp);
     }
 }

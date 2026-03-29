@@ -19,11 +19,14 @@ public interface UserDao {
     @Select("select * from starfall.user where user = #{account} or email = #{account}")
     User findByUserOrEmail(String account);
 
-    @Select("select * from starfall.user u join starfall.user_personalized up on u.user = up.user where u.user = #{user}")
-    UserOtherVO findByUser(String user);
-
     @Select("select * from starfall.user_personalized where user = #{user}")
     UserPersonalized findPersonalizedByUser(String user);
+
+    @Select("select online_uuid from starfall.user_personalized where user = #{user}")
+    String findOnlineUuidByUser(String user);
+
+    @Select("select user from starfall.user_personalized where online_uuid = #{onlineUUID}")
+    String findUserByOnlineUUID(String onlineUUID);
 
     @Insert("insert into starfall.user (user, password,name,gender,email,birthday,exp,level,avatar,role,create_time,update_time) " +
             "values (#{user},#{password},#{name},#{gender},#{email},#{birthday},#{exp},#{level},#{avatar},#{role},#{createTime},#{updateTime})")
@@ -58,4 +61,9 @@ public interface UserDao {
             "where user=#{user}")
     int updatePersonalized(UserPersonalized userPersonalized);
 
+    @Update("update starfall.user_personalized set online_uuid=#{onlineUuid},update_time=#{updateTime} where user=#{user}")
+    int updateOnlineUuid(String user,String onlineUuid,String updateTime);
+
+    @Update("update starfall.user_personalized set online_name=#{onlineName},update_time=#{updateTime} where user=#{user}")
+    int updateOnlineName(String user,String onlineName,String updateTime);
 }

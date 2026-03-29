@@ -1,13 +1,14 @@
-package com.starfall.service;
+package com.starfall.service.admin;
 
-import com.starfall.dao.AdminHomeDao;
-import com.starfall.dao.AdminMessageDao;
-import com.starfall.dao.AdminTopicDao;
-import com.starfall.dao.AdminUserDao;
+import com.starfall.dao.admin.AdminHomeDao;
+import com.starfall.dao.admin.AdminMessageDao;
+import com.starfall.dao.admin.AdminTopicDao;
+import com.starfall.dao.admin.AdminUserDao;
 import com.starfall.entity.*;
 import com.starfall.entity.admin.MedalMapperAdminDTO;
 import com.starfall.entity.admin.UserPersonalizedAdminDTO;
-import com.starfall.util.AECSecureUtil;
+import com.starfall.service.FileService;
+import com.starfall.util.EncDecUtil;
 import com.starfall.util.CodeUtil;
 import com.starfall.util.DateUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -71,14 +72,14 @@ public class AdminUserService {
     }
 
     @Autowired
-    AECSecureUtil aecSecureUtil;
+    EncDecUtil encDecUtil;
 
     @Transactional
     public ResultMsg insertUser(User user) {
         if(userDao.existUser(user.getUser()) == 0){
             if(userDao.existEmail(user.getEmail()) == 0){
                 user.setAvatar("default.png");
-                user.setPassword(aecSecureUtil.encrypt(user.getPassword()));
+                user.setPassword(encDecUtil.aesEncrypt(user.getPassword()));
                 userDao.insertPersonalized(new UserPersonalized(user.getUser(),"这个人很懒~ 什么都没留下",null,0,0,0,0,0, user.getCreateTime(), dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss")));
                 int status = userDao.insertUser(user);
                 return status == 1 ? ResultMsg.success() : ResultMsg.error("DATASOURCE_ERROR");
@@ -94,7 +95,7 @@ public class AdminUserService {
             if(Objects.equals(user.getUser(), oldUser) || userDao.existUser(user.getUser()) == 0){
                 if(Objects.equals(user.getEmail(), oldEmail) || userDao.existEmail(user.getEmail()) == 0){
                     if(!user.getPassword().equals("******")){
-                        user.setPassword(aecSecureUtil.encrypt(user.getPassword()));
+                        user.setPassword(encDecUtil.aesEncrypt(user.getPassword()));
                         userDao.updatePassword(user);
                     }
                     user.setUpdateTime(dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss"));

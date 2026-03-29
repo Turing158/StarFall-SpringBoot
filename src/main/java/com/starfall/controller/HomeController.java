@@ -1,5 +1,6 @@
 package com.starfall.controller;
 
+import com.starfall.Exception.ParamException;
 import com.starfall.entity.ResultMsg;
 import com.starfall.service.HomeService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,13 +15,17 @@ public class HomeController {
 //    @PostMapping("/publicHomeTalk")
     @PostMapping("/talk/insert")
     public ResultMsg publicHomeTalk(String content,@RequestHeader("Authorization") String token){
-        return homeService.publicHomeTalk(content,token);
+        homeService.publicHomeTalk(content,token);
+        return ResultMsg.success();
     }
 
 //    @PostMapping("/findAllHomeTalk")
     @PostMapping("/talk/find")
     public ResultMsg findAllHomeTalk(int num){
-        return homeService.findAllHomeTalk(num);
+        if(num < 0){
+            throw new ParamException("PARAM_ERROR","num必须是非负数");
+        }
+        return ResultMsg.success(homeService.findAllHomeTalk(num));
     }
 
 //    @PostMapping("/deleteHomeTalk")

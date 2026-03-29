@@ -6,7 +6,9 @@ public enum UserNoticeType {
     live("live"),
     friend("friend"),
     msg("msg"),
-    all("all");
+    all("all"),
+
+    tmp("tmp");
 
     UserNoticeType(String name) {
     }

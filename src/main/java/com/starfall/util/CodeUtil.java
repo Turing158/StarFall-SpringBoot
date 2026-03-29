@@ -1,5 +1,6 @@
 package com.starfall.util;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -7,6 +8,7 @@ import java.util.Base64;
 import java.util.Random;
 
 @Component
+@Slf4j
 public class CodeUtil {
     @Autowired
     RedisUtil redisUtil;
@@ -42,6 +44,7 @@ public class CodeUtil {
     }
 
     public boolean checkCode(String codeStr,boolean isCheckDelete){
+        log.info("【校验验证码】codeStr: {}, isCheckDelete: {}", codeStr, isCheckDelete);
         String[] codeSplit = codeStr.split(":");
         if(codeSplit.length != 2){
             return false;

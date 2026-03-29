@@ -25,7 +25,7 @@ public class TopicController {
 //    @PostMapping("/getTopicInfo")
     @PostMapping("/info/find")
     public ResultMsg getTopicInfo(@RequestHeader(name = "Authorization", required = false) String token, String id) {
-        return topicService.getTopicInfo(token, id);
+        return ResultMsg.success(topicService.getTopicInfo(token, id));
     }
 
 
@@ -150,7 +150,7 @@ public class TopicController {
 //    @PostMapping("/collection/person")
     @PostMapping("/collection/user/find")
     public ResultMsg findAllUserCollection(int page, String user) {
-        var topics = topicService.findAllUserCollection(page, user);
+        var topics = topicService.findOtherCollection(user, page);
         return ResultMsg.success(topics.getFirst(),topics.getSecond());
     }
 
@@ -164,19 +164,19 @@ public class TopicController {
 //    @PostMapping("/findFirstPublicTopic")
     @PostMapping("/public/first/find")
     public ResultMsg findFirstPublicTopic() {
-        return topicService.findFirstPublicTopic();
+        return ResultMsg.success(topicService.findFirstPublicTopic());
     }
 
 //    @PostMapping("/findFirstRefreshTopic")
     @PostMapping("/refresh/first/find")
     public ResultMsg findFirstRefreshTopic() {
-        return topicService.findFirstRefreshTopic();
+        return ResultMsg.success(topicService.findFirstRefreshTopic());
     }
 
 //    @PostMapping("/findFirstCommentTopic")
     @PostMapping("/comment/first/find")
     public ResultMsg findFirstCommentTopic() {
-        return topicService.findFirstCommentTopic();
+        return ResultMsg.success(topicService.findFirstCommentTopic());
     }
 
 //    @PostMapping("/findTopicGallery")

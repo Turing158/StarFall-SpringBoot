@@ -1,5 +1,8 @@
 package com.starfall.service;
 
+import cn.hutool.dfa.SensitiveUtil;
+import com.starfall.Exception.ServiceException;
+import com.starfall.annotation.RequireRole;
 import com.starfall.dao.LiveDao;
 import com.starfall.dao.UserDao;
 import com.starfall.entity.*;
@@ -22,21 +25,23 @@ public class LiveService {
     UserDao userDao;
     @Autowired
     UserInteractionService userInteractionService;
+    @Autowired
+    UserNoticeService userNoticeService;
+    @Autowired
+    JwtUtil jwtUtil;
 
     public ResultMsg findLive(int index ,String platform){
         return ResultMsg.success(liveDao.findAllLiveShow(index));
     }
 
     public ResultMsg findAllLiveByUser(String token,int page){
-        Claims claims = JwtUtil.parseJWT(token);
-        String user = (String) claims.get("USER");
+        String user = jwtUtil.getTokenField(token,"USER");
         return ResultMsg.success(liveDao.findAllLiveByUser(user,(page-1)*10),liveDao.countLiveByUser(user));
     }
 
     @Transactional
     public ResultMsg appendLiveApply(String token,String url,String platform){
-        Claims claims = JwtUtil.parseJWT(token);
-        String user = (String) claims.get("USER");
+        String user = jwtUtil.getTokenField(token,"USER");
         if(liveDao.currentDayLiveCount(user) >= 1){
             return ResultMsg.error("LIVE_APPLY_DAY_MAX");
         }
@@ -53,8 +58,7 @@ public class LiveService {
 
     @Transactional
     public ResultMsg deleteLiveApply(String token,String id){
-        Claims claims = JwtUtil.parseJWT(token);
-        String user = (String) claims.get("USER");
+        String user = jwtUtil.getTokenField(token,"USER");
         LiveBroadcast liveBroadcast = liveDao.findLiveBroadcast(id);
         if(liveBroadcast == null){
 
@@ -68,19 +72,17 @@ public class LiveService {
     }
 
     public ResultMsg findAllLiveApplyByStatus0(String token,int page){
-        Claims claims = JwtUtil.parseJWT(token);
-        String user = (String) claims.get("USER");
+        String user = jwtUtil.getTokenField(token,"USER");
         return ResultMsg.success(liveDao.findAllLiveApplyByStatus0((page-1)*10),liveDao.countLiveApplyByStatus0());
     }
 
     @Transactional
+    @RequireRole({"admin","live_moderator"})
     public ResultMsg updateLiveStatus(String token,String id,String playUid,String reason,boolean status){
-        Claims claims = JwtUtil.parseJWT(token);
-        String user = (String) claims.get("USER");
-        UserVO userVO = userDao.findByUser(user);
-        String role = userVO.getRole();
-        if(!role.equals("admin") && !role.equals("live_moderator")){
-            return ResultMsg.error("PERMISSION_DENIED");
+        String user = jwtUtil.getTokenField(token,"USER");
+        var sensitiveWords = SensitiveUtil.getFoundAllSensitive(reason);
+        if(!sensitiveWords.isEmpty()){
+            throw new ServiceException("SENSITIVE_ERROR","包含敏感词");
         }
         LiveBroadcast liveBroadcast = liveDao.findLiveBroadcast(id);
         if(liveBroadcast == null){
@@ -88,7 +90,7 @@ public class LiveService {
         }
         int result = liveDao.updateLiveStatus(id,user,playUid,status ? 1 : -1,reason);
         LiveNoticeAction liveNoticeAction = new LiveNoticeAction(id,liveBroadcast.getUrl(),reason,user,status);
-        userInteractionService.insertNotice(user, UserNoticeType.live,"直播申请"+(status ? "已通过" : "不通过"), JsonOperate.toJson(liveNoticeAction,false));
+        userNoticeService.insertNotice(user, UserNoticeType.live,"直播申请"+(status ? "已通过" : "不通过"), JsonOperate.toJson(liveNoticeAction,false));
 //        messageService.SendMessage(token,liveBroadcast.getUser(),"您的直播申请("+liveBroadcast.getUrl()+")已被"+(status?"<span style='color:darkgreen'>通过</span>":"<span style='color:darkred'>拒绝</span>")+"，原因："+reason);
         return result > 0 ? ResultMsg.success() : ResultMsg.error("DATA_ERROR");
     }
