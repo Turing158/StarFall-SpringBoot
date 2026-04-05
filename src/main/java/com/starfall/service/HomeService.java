@@ -9,6 +9,7 @@ import com.starfall.util.CodeUtil;
 import com.starfall.util.JwtUtil;
 import com.starfall.util.RedisUtil;
 import io.jsonwebtoken.Claims;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +21,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Service
+@Slf4j
 public class HomeService {
     @Autowired
     private HomeDao homeDao;
@@ -36,24 +38,29 @@ public class HomeService {
         }
         else {
             count = homeDao.countHomeTalk();
-            redisUtil.set("homeTalks:cache:count", count, 1, TimeUnit.HOURS,true);
+            redisUtil.set("homeTalks:cache:count", count, 1, TimeUnit.HOURS);
         }
         if(count < num){
             return null;
         }
         if(redisUtil.hasKey("homeTalks:cache:last80")){
-            List<HomeTalk> cache = redisUtil.get("homeTalks:cache:last80", List.class);
-            if(num > cache.size()){
-                homeTalks = homeDao.findAllHomeTalk(num);
+            List<HomeTalk> cache = redisUtil.getList("homeTalks:cache:last80", HomeTalk.class);
+            if(num >= cache.size()){
+                homeTalks = homeDao.findAllHomeTalk(num,20);
             }
             else{
-
                 homeTalks = redisUtil.paginateByIndex(cache, num, 20);
             }
         }
         else{
-            homeTalks = homeDao.findAllHomeTalk(num);
-            redisUtil.set("homeTalks:cache:last80", homeTalks, 1, TimeUnit.HOURS);
+            if(num >= 80){
+                homeTalks = homeDao.findAllHomeTalk(num,20);
+            }
+            else{
+                var cache = homeDao.findAllHomeTalk(0,80);
+                homeTalks = redisUtil.paginateByIndex(cache, num, 20);
+                redisUtil.set("homeTalks:cache:last80", cache, 1, TimeUnit.HOURS);
+            }
         }
         return homeTalks;
     }

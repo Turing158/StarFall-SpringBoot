@@ -20,4 +20,12 @@ public class CommentVO {
     int exp;
     final int maxExp = Exp.getMaxExp(level);
     String signature;
+
+    public CommentVO(String topicId,String user,String date,String content,int weight){
+        this.topicId = topicId;
+        this.user = user;
+        this.date = date;
+        this.content = content;
+        this.weight = weight;
+    }
 }

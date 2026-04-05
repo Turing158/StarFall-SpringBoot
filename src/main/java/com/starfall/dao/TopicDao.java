@@ -19,17 +19,17 @@ public interface TopicDao {
     @Select("select * from starfall.topic t join starfall.user u on t.user = u.user where label = #{label} and belong = #{belong} and display = 1 order by refresh desc")
     List<Topic> findAllTopicLabel(String label,String belong);
 
-    @Select("select * from starfall.topic t join starfall.user u on t.user = u.user where display = 1 and belong = #{belong} order by refresh desc limit #{num},30")
-    List<Topic> findAllTopicLimit30(int num,String belong);
+    @Select("select * from starfall.topic t join starfall.user u on t.user = u.user where display = 1 and belong = #{belong} order by refresh desc limit #{num},#{limit}")
+    List<Topic> findAllTopicLimit(String belong,int num,int limit);
 
-    @Select("select * from starfall.topic t join starfall.user u on t.user = u.user where label = #{label} and display = 1 and belong = #{belong} order by refresh desc limit #{num},30")
-    List<Topic> findAllTopicLabelLimit30(int num,String label,String belong);
+    @Select("select * from starfall.topic t join starfall.user u on t.user = u.user where label = #{label} and display = 1 and belong = #{belong} order by refresh desc limit #{num},#{limit}")
+    List<Topic> findAllTopicLabelLimit(String label,String belong,int num,int limit);
 
     @Select("select count(*) from starfall.topic where display = 1 and belong = #{belong}")
-    int findTopicTotal(String belong);
+    int countTopicAll(String belong);
 
     @Select("select count(*) from starfall.topic where label = #{label} and belong = #{belong} and display = 1")
-    int findTopicTotalByLabel(String label,String belong);
+    int countTopicAllByLabel(String label,String belong);
 
     // 这个查询不到用户名称和头像以及主题的详细内容
     @Select("select * from starfall.topic where id = #{id}")
@@ -38,20 +38,20 @@ public interface TopicDao {
     @Select("select * from starfall.topic t join starfall.topicitem ti on t.id = ti.topicId left join starfall.user u on u.user = t.user left join starfall.user_personalized up on t.user = up.user where t.id = #{id}")
     TopicOut findTopicInfoById(String id);
 
-    @Select("select * from starfall.topic t join starfall.user u on t.user = u.user where u.user = #{user} limit #{num},20")
-    List<Topic> findTopicByUser(int num,String user);
+    @Select("select * from starfall.topic t join starfall.user u on t.user = u.user where u.user = #{user} order by date desc limit #{num},#{limit}")
+    List<Topic> findTopicByUser(String user,int num,int limit);
 
-    @Select("select * from starfall.topic t join starfall.user u on t.user = u.user where u.user = #{user} and display = 1 limit #{num},20")
-    List<Topic> findTopicByUserWhereDisplay(int num,String user);
+    @Select("select * from starfall.topic t join starfall.user u on t.user = u.user where u.user = #{user} and display = 1 order by date desc limit #{num},#{limit}")
+    List<Topic> findTopicByUserWhereDisplay(String user,int num,int limit);
 
     @Select("select count(*) from starfall.topic where user = #{user}")
     int findTopicTotalByUser(String user);
 
-    @Select("select count(*) from starfall.topic where DATE(date) = CURDATE() and user=#{user}")
-    int countTopicTotalByDateAndUser(String user);
-
     @Select("select count(*) from starfall.topic where user = #{user} and display = 1")
     int findTopicTotalByUserWhereDisplay(String user);
+
+    @Select("select count(*) from starfall.topic where DATE(date) = CURDATE() and user=#{user}")
+    int countTopicTotalByDateAndUser(String user);
 
     @Select("select * from starfall.topic t join starfall.user u on t.user = u.user where display = 1 order by date desc limit 7")
     List<Topic> findFirstPublicTopic();
@@ -71,8 +71,8 @@ public interface TopicDao {
     @Insert("insert into starfall.topic values (#{id},#{title},#{label},#{user},#{date},0,0,#{version},#{refresh},#{display},#{belong},#{isFirstPublic})")
     int insertTopic(Topic topic);
 
-    @Insert("insert into starfall.topicitem values (#{topicId},#{subtitle},#{subtitleEn},#{source},#{author},#{language},#{address},#{download},#{content})")
-    int insertTopicItem(String topicId,String subtitle,String subtitleEn,String source,String author,String language,String address,String download,String content);
+    @Insert("insert into starfall.topicitem values (#{topicId},#{topicTitle},#{enTitle},#{source},#{author},#{language},#{address},#{download},#{content})")
+    int insertTopicItem(TopicItem topicItem);
 
     @Update("update starfall.topic set view = #{view} where id = #{id}")
     int updateTopicView(int view,String id);
@@ -90,8 +90,11 @@ public interface TopicDao {
     int deleteTopicItem(String topicId);
 
 //    评论
-    @Select("select * from starfall.comment c join starfall.user u on c.user = u.user join starfall.user_personalized up on c.user = up.user where topicid = #{id} order by date limit #{num},10")
-    List<CommentVO> findCommentByTopicId(String id, int num);
+    @Select("select * from starfall.comment c join starfall.user u on c.user = u.user join starfall.user_personalized up on c.user = up.user where topicid = #{id} order by date limit #{num},#{limit}")
+    List<CommentVO> findCommentByTopicId(String id, int num,int limit);
+
+    @Select("select * from starfall.comment c join starfall.user u on c.user = u.user join starfall.user_personalized up on c.user = up.user where topicid = #{id} and weight != 0 order by date ,weight desc limit 3")
+    List<CommentVO> findCommentTopByTopicId(String id);
 
     @Select("select * from starfall.comment where topicId=#{topicId} and user=#{user} and date=#{date}")
     Comment findCommentByUserAndTopicIdAndDate(String user,String topicId,String date);
@@ -130,8 +133,8 @@ public interface TopicDao {
     @Select("select * from starfall.likelog where topicId = #{id} and user = #{user}")
     LikeLog findLikeByTopicAndUser(String id,String user);
 
-    @Insert("insert into starfall.likelog value (#{id},#{user},#{state},#{date})")
-    int insertLike(String id,String user,int state,String date);
+    @Insert("insert into starfall.likelog value (#{topicId},#{user},#{status},#{date})")
+    int insertLike(LikeLog likeLog);
 
     @Update("update starfall.likelog set status = #{status},date = #{date} where topicId = #{id} and user = #{user}")
     int updateLikeStateByTopicAndUser(String id,String user,int status,String date);
@@ -140,8 +143,8 @@ public interface TopicDao {
     int deleteLikeLog(String topicId);
 
 //    收藏
-    @Select("select t.id,t.title,t.label,tu.user,tu.name,tu.avatar,t.date,t.view,t.comment,t.version,t.display,t.belong from starfall.collection c left join starfall.topic t on c.topicId = t.id left join starfall.user tu on tu.user = t.user left join starfall.user u on c.user = u.user where c.user = #{user} and t.display = 1 order by c.date desc limit #{num},20")
-    List<Topic> findCollectByUser(String user,int num);
+    @Select("select t.id,t.title,t.label,tu.user,tu.name,tu.avatar,t.date,t.view,t.comment,t.version,t.display,t.belong from starfall.collection c left join starfall.topic t on c.topicId = t.id left join starfall.user tu on tu.user = t.user left join starfall.user u on c.user = u.user where c.user = #{user} and t.display = 1 order by c.date desc limit #{num},#{limit}")
+    List<Topic> findCollectByUser(String user,int num,int limit);
 
     @Select("select count(*) from starfall.collection c left join starfall.topic t on c.topicId = t.id where c.user = #{user} and t.display = 1")
     int countCollectByUser(String user);
@@ -155,17 +158,14 @@ public interface TopicDao {
     @Select("select count(*) from starfall.collection where user = #{user} and topicId = #{id}")
     int existCollection(String user,String id);
 
-    @Insert("insert into starfall.collection (user,topicId,date) values (#{user},#{id},#{date})")
-    int appendCollect(String user,String id,String date);
+    @Insert("insert into starfall.collection (user,topicId,date) values (#{user},#{topicId},#{date})")
+    int appendCollect(Collection collection);
 
     @Delete("delete from starfall.collection where user = #{user} and topicId = #{id}")
     int deleteCollect(String user,String id);
 
 
 //    主题画廊
-    @Select("select * from starfall.topic_gallery where id = #{id}")
-    TopicGallery findTopicGalleryById(String id);
-
     @Select("select * from starfall.topic_gallery where topicId = #{topicId}")
     List<TopicGallery> findTopicGalleryByTopicId(String topicId);
 

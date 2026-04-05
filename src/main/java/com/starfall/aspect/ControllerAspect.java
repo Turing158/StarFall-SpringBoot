@@ -63,13 +63,14 @@ public class ControllerAspect {
     public void doAfterThrowing(JoinPoint joinPoint, Exception ex) {
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         HttpServletRequest request = attributes.getRequest();
-        log.error("【请求异常】{} {}\tIP: {}\t方法: {}.{}\t异常: {}",
+        log.error("【请求异常】{} {}\tIP: {}\t方法: {}.{}\t异常: {}\t栈: {}",
                 request.getMethod(),
                 request.getRequestURL(),
                 getIpAddress(request),
                 joinPoint.getSignature().getDeclaringTypeName(),
                 joinPoint.getSignature().getName(),
-                ex.getMessage()
+                ex.getMessage(),
+                ex.getStackTrace()
         );
     }
 

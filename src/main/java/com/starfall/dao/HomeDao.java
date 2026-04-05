@@ -7,8 +7,8 @@ import java.util.List;
 
 @Mapper
 public interface HomeDao {
-    @Select("select * from starfall.home_talk join starfall.user u on home_talk.user = u.user order by date desc limit #{num},20")
-    List<HomeTalk> findAllHomeTalk(int num);
+    @Select("select * from starfall.home_talk join starfall.user u on home_talk.user = u.user order by date desc limit #{num},#{limit}")
+    List<HomeTalk> findAllHomeTalk(int num,int limit);
 
     @Select("select * from starfall.home_talk join starfall.user u on home_talk.user = u.user order by date desc limit 80")
     List<HomeTalk> findLast80HomeTalk();

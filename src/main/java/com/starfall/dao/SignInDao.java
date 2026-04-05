@@ -9,8 +9,8 @@ import java.util.List;
 
 @Mapper
 public interface SignInDao {
-    @Select("select * from starfall.sign_in where user = #{user} order by date desc limit #{page},6")
-    List<SignIn> findAllSignInByUser(String user,int page);
+    @Select("select * from starfall.sign_in where user = #{user} order by date desc limit #{page},#{limit}")
+    List<SignIn> findAllSignInByUser(String user,int page,int limit);
 
     @Select("select count(*) from starfall.sign_in where user = #{user}")
     int countSignInByUser(String user);

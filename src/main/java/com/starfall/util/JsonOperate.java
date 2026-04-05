@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
+import java.util.List;
+
 public class JsonOperate {
     public static String toJson(Object object) {
         return toJson(object,true,JsonInclude.Include.NON_NULL);
@@ -31,7 +33,6 @@ public class JsonOperate {
         return json;
     }
 
-
     public static <T> T toObject(String json, Class<T> valueType) {
         ObjectMapper mapper = new ObjectMapper();
         T object = null;
@@ -43,4 +44,15 @@ public class JsonOperate {
         return object;
     }
 
+    public static <T> List<T> toList(String json, Class<T> valueType) {
+        ObjectMapper mapper = new ObjectMapper();
+        List<T> object = null;
+        try {
+            object = mapper.readValue(json, mapper.getTypeFactory()
+                    .constructParametricType(List.class, valueType));
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+        return object;
+    }
 }

@@ -3,11 +3,10 @@ package com.starfall.service;
 import cn.hutool.core.lang.Pair;
 import cn.hutool.dfa.SensitiveUtil;
 import com.starfall.Exception.ServiceException;
-import com.starfall.dao.UserDao;
 import com.starfall.dao.UserInteractionDao;
+import com.starfall.dao.redis.UserRedis;
 import com.starfall.entity.*;
 import com.starfall.util.*;
-import io.jsonwebtoken.Claims;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +30,7 @@ public class UserInteractionService {
     @Autowired
     UserNoticeService userNoticeService;
     @Autowired
-    UserService userService;
+    UserRedis userRedis;
     @Autowired
     RedisUtil redisUtil;
     @Autowired
@@ -48,7 +47,7 @@ public class UserInteractionService {
         if(!sensitiveWords.isEmpty()){
             throw new ServiceException("SENSITIVE_ERROR","包含敏感词");
         }
-        if(userService.findRedisUser(friend) == null){
+        if(userRedis.findRedisUser(friend) == null){
             log.warn("用户{}尝试添加不存在的用户{}为好友，已拒绝",user,friend);
             throw new ServiceException("USER_NOT_EXIST","用户不存在");
         }
@@ -70,7 +69,7 @@ public class UserInteractionService {
         }
         LocalDateTime ldt = LocalDateTime.now();
         String id = "fa" + dateUtil.getDateTimeByFormat(ldt,"yyyyMMddHHmmssSSSS") + CodeUtil.getCode(6);
-        User userObj = userService.findRedisUser(user);
+        User userObj = userRedis.findRedisUser(user);
         String action = JsonOperate.toJson(new FriendNoticeAction(id,userObj.getName(),userObj.getUser(),userObj.getAvatar(),reason,0,false),false);
         log.info("生成好友申请通知的action：{}",action);
         userNoticeService.insertNotice(friend,UserNoticeType.friend,"新的好友申请",action);
@@ -166,10 +165,10 @@ public class UserInteractionService {
         if (Objects.equals(fromUser, toUser)){
             throw new ServiceException("DISABLE_TO_SELF","不能发送消息给自己");
         }
-        if(!userService.existUser(toUser)){
+        if(!userRedis.existRedisUser(toUser)){
             throw new ServiceException("NO_EXIST_USER","用户"+toUser+"不存在");
         }
-        var fromUserObj = userService.findRedisUser(fromUser);
+        var fromUserObj = userRedis.findRedisUser(fromUser);
         if(fromUserObj == null){
             throw new ServiceException("USER_ERROR","用户"+fromUser+"不存在，且token存在伪造问题");
         }
@@ -183,7 +182,7 @@ public class UserInteractionService {
         if(content.contains("[&divide&]")){
             content = content.replace("[&divide&]"," ");
         }
-        User toUserObj= userService.findRedisUser(toUser);
+        User toUserObj= userRedis.findRedisUser(toUser);
         String date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
         Message message = new Message(fromUser,friendRelation.getAlias() == null || friendRelation.getAlias().isEmpty() ? fromUserObj.getName() : friendRelation.getAlias(),fromUserObj.getAvatar(),toUser,toUserObj.getName(),toUserObj.getAvatar(),date,content);
         List<Message> fromUserMsgs = userInteractionDao.findFromUserMsgByFromUserAndToUser(fromUser,toUser);
@@ -261,7 +260,7 @@ public class UserInteractionService {
         FriendRelation relation = handleFriendExist(token,friend);
         log.info("执行deleteFriend:用户{}，friend={}",relation.getFromUser(),friend);
         FriendRelation toRelation = userInteractionDao.findFriendRelation(relation.getToUser(), relation.getFromUser());
-        var userObj = userService.findRedisUser(relation.getFromUser());
+        var userObj = userRedis.findRedisUser(relation.getFromUser());
         userInteractionDao.deleteFriendRelation(relation.getFromUser(),friend);
         if(deleteChatRecord){
             userInteractionDao.deleteMsgByUserAndFriend(relation.getFromUser(),friend);

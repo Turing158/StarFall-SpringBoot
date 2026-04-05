@@ -4,6 +4,7 @@ import cn.hutool.dfa.SensitiveUtil;
 import com.starfall.Exception.ServiceException;
 import com.starfall.dao.SignInDao;
 import com.starfall.dao.UserDao;
+import com.starfall.dao.redis.UserRedis;
 import com.starfall.entity.*;
 import com.starfall.util.*;
 import io.jsonwebtoken.Claims;
@@ -20,6 +21,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.net.URI;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -37,6 +39,8 @@ public class UserService {
     UserDao userDao;
     @Autowired
     SignInDao signInDao;
+    @Autowired
+    UserRedis userRedis;
     @Autowired
     EncDecUtil encDecUtil;
     @Autowired
@@ -85,8 +89,16 @@ public class UserService {
 
     public ResultMsg getUserInfo(String token){
         String user = jwtUtil.getTokenField(token,"USER");
-        UserVO userObj = getUserObj(token,user);
-        return ResultMsg.success(userObj);
+        token = jwtUtil.parseTokenStr(token);
+        UserVO userVO = null;
+        if(redisUtil.hasKey("onlineUser:" + token)){
+            userVO = redisUtil.get("onlineUser:" + token, UserVO.class);
+        }
+        else{
+            userVO = userRedis.findRedisUser(user).toUserVO();
+            redisUtil.set("onlineUser:" + token,userVO,10 ,TimeUnit.MINUTES);
+        }
+        return ResultMsg.success(userVO);
     }
 
     @Transactional
@@ -165,7 +177,8 @@ public class UserService {
         }
         if(codeUtil.checkEmailCode("forgetEmailCode:",email,code,true)){
             userDao.updatePassword(user, encDecUtil.aesEncrypt(password), dateUtil.getDateTimeByFormat(LocalDateTime.now(),"yyyy-MM-dd HH:mm:ss"));
-            return ResultMsg.success();  
+            redisUtil.delete("user:cache:" + user);
+            return ResultMsg.success();
         }
         return ResultMsg.error("EMAIL_CODE_ERROR");
     }
@@ -180,25 +193,36 @@ public class UserService {
             throw new ServiceException("SENSITIVE_ERROR", "用户名包含敏感词");
         }
         String user = jwtUtil.getTokenField(token,"USER");
-        int status = userDao.updateInfo(user,name,gender,birthday, dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss"));
+        User userObj = userRedis.findRedisUser(user);
+        String date = dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss");
+        int status = userDao.updateInfo(user,name,gender,birthday, date);
+        userObj.setName(name);
+        userObj.setGender(gender);
+        userObj.setBirthday(birthday);
+        userObj.setUpdateTime(date);
+        userRedis.setRedisUser(user, userObj);
         if(status != 1){
             throw new ServiceException("DATASOURCE_ERROR", "数据源错误");
         }
-        UserVO userObj = userDao.findByUserOrEmail(user).toUserVO();
-        redisUtil.set("onlineUser:" + token,userObj,30, TimeUnit.MINUTES);
+
+        redisUtil.set("onlineUser:" + token,userObj.toUserVO(),30, TimeUnit.MINUTES);
         searchService.saveUserName(user,name);
-        return userObj;
+        return userObj.toUserVO();
     }
 
     @Transactional
     public ResultMsg settingPassword(String token,String oldPassword,String newPassword,String code){
         if(codeUtil.checkCode(code)){
             String user = jwtUtil.getTokenField(token,"USER");
-            User userObj = userDao.findByUserOrEmail(user);
+            User userObj = userRedis.findRedisUser(user);
             String encryptOldPassword = encDecUtil.aesEncrypt(oldPassword);
             if(userObj.getPassword().equals(encryptOldPassword)){
                 String encryptNewPassword = encDecUtil.aesEncrypt(newPassword);
-                int status = userDao.updatePassword(user,encryptNewPassword, dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss"));
+                String date = dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss");
+                int status = userDao.updatePassword(user,encryptNewPassword, date);
+                userObj.setPassword(encryptNewPassword);
+                userObj.setUpdateTime(date);
+                userRedis.setRedisUser(user, userObj);
                 if(status == 1){
                     return ResultMsg.success();
                 }
@@ -212,7 +236,7 @@ public class UserService {
     @Transactional
     public ResultMsg settingAvatar(String token,String avatarBase64){
         String user = jwtUtil.getTokenField(token,"USER");
-        UserVO userObj = getUserObj(token,user);
+        User userObj = userRedis.findRedisUser(user);
         String oldAvatar = userObj.getAvatar();
         String avatarName = dateUtil.getDateTimeByFormat("yyyyMMddHHmmssSSSS") + CodeUtil.getCode(6);
         String fileName = avatarName + ".png";
@@ -222,15 +246,18 @@ public class UserService {
         if(!oldAvatar.equals("default.png")){
             fileService.removeFile(oldAvatar);
         }
-        userDao.updateAvatar(user,folder+"/"+fileName, dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss"));
+        String date = dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss");
+        userDao.updateAvatar(user,folder+"/"+fileName, date);
         userObj.setAvatar(folder+"/"+fileName);
-        redisUtil.set("onlineUser:" + jwtUtil.parseTokenStr(token) ,userObj,5, TimeUnit.MINUTES);
+        redisUtil.set("onlineUser:" + jwtUtil.parseTokenStr(token) ,userObj.toUserVO(),5, TimeUnit.MINUTES);
+        userObj.setUpdateTime(date);
+        userRedis.setRedisUser(user, userObj);
         return ResultMsg.success(folder+"/"+fileName);
     }
 
     public ResultMsg sendOldEmailCode(String token){
         String user = jwtUtil.getTokenField(token,"USER");
-        User userObj = userDao.findByUserOrEmail(user);
+        User userObj = userRedis.findRedisUser(user);
         if(redisUtil.getExpire("oldEmailCode:" + userObj.getEmail()) > 4 * 60){
             return ResultMsg.error("SEND_FAST_ERROR");
         }
@@ -255,13 +282,17 @@ public class UserService {
     @Transactional
     public ResultMsg settingEmail(String token,String newEmail,String oldEmailCode,String newEmailCode){
         String user = jwtUtil.getTokenField(token,"USER");
-        User userObj = userDao.findByUserOrEmail(user);
+        User userObj = userRedis.findRedisUser(user);
         if(codeUtil.checkEmailCode("oldEmailCode:",userObj.getEmail(),oldEmailCode)){
             if(codeUtil.checkEmailCode("newEmailCode:",newEmail,newEmailCode)){
                 if(userDao.existEmail(newEmail) == 0){
-                    int status = userDao.updateEmail(user,newEmail, dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss"));
+                    String date = dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss");
+                    int status = userDao.updateEmail(user,newEmail, date);
+                    userObj.setEmail(newEmail);
+                    userObj.setUpdateTime(date);
+                    userRedis.setRedisUser(user, userObj);
                     if(status == 1){
-                        UserVO userVO = findRedisUser(user).toUserVO();
+                        UserVO userVO = userObj.toUserVO();
                         Map<String,Object> newClaims = new HashMap<>();
                         newClaims.put("USER",user);
                         newClaims.put("ROLE", userVO.getRole());
@@ -281,7 +312,7 @@ public class UserService {
     }
 
     public ResultMsg findUserByUser(String user){
-        UserOtherVO userObj = new UserOtherVO(findRedisUser(user),findRedisUserPersonalized(user));
+        UserOtherVO userObj = new UserOtherVO(userRedis.findRedisUser(user),userRedis.findRedisUserPersonalized(user));
         return ResultMsg.success(userObj);
     }
 
@@ -298,13 +329,13 @@ public class UserService {
 
     public ResultMsg findAllSignIn(String token,int page){
         String user = jwtUtil.getTokenField(token,"USER");
-        List<SignIn> signInList = signInDao.findAllSignInByUser(user,(page-1)*6);
-        int count = signInDao.countSignInByUser(user);
+        List<SignIn> signInList = userRedis.findRedisSignIn(user,page);
+        int count = userRedis.findRedisSignInCount(user);
         return ResultMsg.success(signInList,count);
     }
 
     private boolean isSignInToday(String user){
-        if(redisUtil.hasKey("signInToday:" + user + ":" + dateUtil.getDateTimeByFormat("yyyy-MM-dd"))){
+        if(redisUtil.hasKey("user:signIn:today" + user + ":" + dateUtil.getDateTimeByFormat("yyyy-MM-dd"))){
             return true;
         }
         return signInDao.countTodaySignIn(user) == 1;
@@ -312,7 +343,7 @@ public class UserService {
 
     public ResultMsg checkSignIn(String token){
         String user = jwtUtil.getTokenField(token,"USER");
-        return ResultMsg.success(isSignInToday(user),signInDao.countContinualSignIn(user));
+        return ResultMsg.success(isSignInToday(user),userRedis.findRedisSignInContinualCount(user));
     }
 
     @Transactional
@@ -328,7 +359,7 @@ public class UserService {
         }
         Random r = new Random();
         int addExp = r.nextInt(50)+20;
-        UserVO userObj = getUserObj(token,user);
+        User userObj = userRedis.findRedisUser(user);
         int exp = userObj.getExp() + addExp;
         int level = userObj.getLevel();
         int expDiff = Exp.checkAndLevelUp(exp,level);
@@ -339,16 +370,28 @@ public class UserService {
         msg = "[获得"+addExp+"点经验] "+msg;
         LocalDateTime ldt = LocalDateTime.now();
         SignIn signIn = new SignIn(user, null, dateUtil.getDateTimeByFormat(ldt,"yyyy-MM-dd"),msg,emotion);
+        int count = userRedis.findRedisSignInContinualCount(user);
         signInDao.insertSignIn(signIn);
-        redisUtil.set("signInToday:" + user + ":" + signIn.getDate() ,signIn,1 ,TimeUnit.DAYS);
-        userDao.updateExp(user,exp,level,dateUtil.getDateTimeByFormat(ldt,"yyyy-MM-dd HH:mm:ss"));
-        int count = signInDao.countContinualSignIn(user);
+        var previousSignIns = userRedis.findRedisSignIn(user,1);
+        //这里的判断比较复杂，如果获取到的count（连续签到数）!= 0，说明存在连续签到记录；如果!previousSignIns.isEmpty()，说明存在签到记录，且可能是连续签到；如果dateUtil.isContinuityOfDate(...)，说明最近一次签到记录的日期与当前日期是连续的，那么才可以继续增加连续签到数，否则重置为1
+        boolean isContinual = count != 0 && !previousSignIns.isEmpty() && dateUtil.isContinuityOfDate(LocalDate.parse(previousSignIns.get(0).getDate()),ldt.toLocalDate());
+        userRedis.setRedisSignInContinualCount(user, isContinual);
+        userRedis.setRedisSignIn(user,signIn);
+        userRedis.setRedisSignInCount(user,true);
+        redisUtil.set(redisUtil.joinKey("user:signIn:today",user,signIn.getDate()),signIn,1 ,TimeUnit.DAYS);
+        String updateTime = dateUtil.getDateTimeByFormat(ldt,"yyyy-MM-dd HH:mm:ss");
+        userDao.updateExp(user,exp,level,updateTime);
+//        这里与上面的判断是一样的，然后让count+1或者重置为1
+        count = isContinual ? count + 1 : 1;
         medalService.checkAndGainSignInCount30Or365DayMedal(count,true,user);
         medalService.checkAndGainSignInCount30Or365DayMedal(count,false,user);
         userObj.setExp(exp);
         userObj.setLevel(level);
-        userObj.setMaxExp(Exp.getMaxExp(level));
-        redisUtil.set("onlineUser:" + token,userObj,10 ,TimeUnit.MINUTES);
+        userObj.setUpdateTime(updateTime);
+        userRedis.setRedisUser(user, userObj);
+        var tokenUser = userObj.toUserVO();
+        tokenUser.setMaxExp(Exp.getMaxExp(level));
+        redisUtil.set(redisUtil.joinKey("onlineUser",token), tokenUser,10 ,TimeUnit.MINUTES);
         return addExp;
     }
 
@@ -374,7 +417,7 @@ public class UserService {
 
     public UserPersonalized findPersonalized(String token){
         String user = jwtUtil.getTokenField(token,"USER");
-        return findRedisUserPersonalized(user);
+        return userRedis.findRedisUserPersonalized(user);
     }
 
     @Transactional
@@ -384,16 +427,16 @@ public class UserService {
             throw new ServiceException("CODE_ERROR","验证码错误");
         }
         var sensitiveWords = SensitiveUtil.getFoundAllSensitive(personalizedDTO.getSignature());
-        if(!sensitiveWords.isEmpty()){
+        if(sensitiveWords != null && !sensitiveWords.isEmpty()){
             throw new ServiceException("SENSITIVE_ERROR","签名包含敏感词："+sensitiveWords);
         }
-        UserPersonalized redisPersonalized = findRedisUserPersonalized(user);
+        UserPersonalized redisPersonalized = userRedis.findRedisUserPersonalized(user);
         UserPersonalized personalized = personalizedDTO.toUserPersonalized();
         personalized.setUser(user);
         personalized.setUpdateTime(dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss"));
-        userDao.updatePersonalized(personalized);
         personalized.setSignature(redisPersonalized.getSignature());
-        redisUtil.set("personalized:" + user, personalized);
+        userRedis.setRedisUserPersonalized(user,personalized);
+        userDao.updatePersonalized(personalized);
     }
 
     @Transactional
@@ -406,21 +449,12 @@ public class UserService {
         if(!sensitiveWords.isEmpty()){
             throw new ServiceException("SENSITIVE_ERROR","签名包含敏感词："+sensitiveWords);
         }
-        UserPersonalized redisPersonalized = findRedisUserPersonalized(user);
+        UserPersonalized redisPersonalized = userRedis.findRedisUserPersonalized(user);
         redisPersonalized.setSignature(signature);
         redisPersonalized.setUpdateTime(dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss"));
+        userRedis.setRedisUserPersonalized(user,redisPersonalized);
         userDao.updateSignature(user,signature,redisPersonalized.getUpdateTime());
-        redisUtil.set("personalized:" + user, redisPersonalized);
-    }
 
-    private UserVO getUserObj(String token,String user){
-        token = jwtUtil.parseTokenStr(token);
-        if(redisUtil.hasKey("onlineUser:" + token)){
-            return redisUtil.get("onlineUser:" + token, UserVO.class);
-        }
-        var userObj = userDao.findByUserOrEmail(user).toUserVO();
-        redisUtil.set("onlineUser:" + token,userObj,10 ,TimeUnit.MINUTES);
-        return userObj;
     }
 
     @Autowired
@@ -491,37 +525,5 @@ public class UserService {
         medalService.checkAndGainMinecraftPlayer(response,user);
         log.info("minecraftVerify success:{}",user);
         return response;
-    }
-
-    //辅助函数，不作为接口
-    public UserPersonalized findRedisUserPersonalized(String user){
-        UserPersonalized personalized;
-        if(redisUtil.hasKey("personalized:" + user)){
-            personalized = redisUtil.get("personalized:" + user, UserPersonalized.class);
-        }
-        else{
-            personalized = userDao.findPersonalizedByUser(user);
-            redisUtil.set("personalized:" + user, personalized);
-        }
-        return personalized;
-    }
-
-    public User findRedisUser(String user){
-        User userObj;
-        if(redisUtil.hasKey("user:" + user)){
-            userObj = redisUtil.get("user:" + user, User.class);
-        }
-        else{
-            userObj = userDao.findByUserOrEmail(user);
-            redisUtil.set("user:" + userObj.getUser(), userObj, 30 ,TimeUnit.MINUTES);
-        }
-        return userObj;
-    }
-
-    public boolean existUser(String user){
-        if(redisUtil.hasKey("user:" + user)){
-            return true;
-        }
-        return userDao.existUser(user) >= 1;
     }
 }

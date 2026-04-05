@@ -9,8 +9,8 @@ import java.time.format.DateTimeFormatter;
 
 @Component
 public class DateUtil {
-    public boolean isContinuityOfDate(LocalDate date1, LocalDate date2){
-        return date1.plusDays(1).equals(date2);
+    public boolean isContinuityOfDate(LocalDate previousDate, LocalDate now){
+        return previousDate.plusDays(1).equals(now);
     }
 
     public String fillZero(int num){

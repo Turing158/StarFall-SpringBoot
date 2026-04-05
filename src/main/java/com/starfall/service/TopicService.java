@@ -6,7 +6,9 @@ import com.starfall.Exception.ServiceException;
 import com.starfall.annotation.RequireRole;
 import com.starfall.dao.TopicDao;
 import com.starfall.dao.UserDao;
+import com.starfall.dao.redis.UserRedis;
 import com.starfall.entity.*;
+import com.starfall.dao.redis.TopicRedis;
 import com.starfall.util.*;
 import io.jsonwebtoken.Claims;
 import lombok.extern.slf4j.Slf4j;
@@ -43,11 +45,13 @@ public class TopicService {
     @Autowired
     UserDao userDao;
     @Autowired
+    TopicRedis topicRedis;
+    @Autowired
+    UserRedis userRedis;
+    @Autowired
     FileService fileService;
     @Autowired
     SearchService searchService;
-    @Autowired
-    UserService userService;
     @Autowired
     UserInteractionService userInteractionService;
     @Autowired
@@ -63,57 +67,28 @@ public class TopicService {
     @Autowired
     ClamAvUtil clamAvUtil;
 
-
-
     private final int topicSize = 30;
 
-    public ResultMsg findAllTopic(int page,String label,String version,String belong){
-        List<Topic> list = null;
-        int num = 0;
+    public Pair<List<Topic>,Integer> findAllTopic(int page,String label,String version,String belong){
         if (page <= 0){
             page = 1;
         }
-        if (label == null || version == null || label.isBlank() || version.isBlank()){
-            list = topicDao.findAllTopicLimit30((page-1)*topicSize,belong);
-            num = topicDao.findTopicTotal(belong);
-            return ResultMsg.success(list,num);
+        if((label.isBlank() || label.equals("全部")) && (version.isBlank() || version.equals("全部"))){
+            label = null;
+            version = null;
         }
-        if(label.equals("全部") && version.equals("全部")){
-            list = topicDao.findAllTopicLimit30((page-1)*topicSize,belong);
-            num = topicDao.findTopicTotal(belong);
+        else if(label.isBlank() || label.equals("全部")){
+            label = null;
         }
-        else if(label.equals("全部")){
-            list = new ArrayList<>();
-            for (Topic item : topicDao.findAllTopic(belong)) {
-                if (VersionUtil.match(version,item.getVersion())){
-                    num++;
-                    if (list.size() <= topicSize && num > (page-1)*topicSize){
-                        list.add(item);
-                    }
-                }
-            }
+        else if(version.isBlank() || version.equals("全部")){
+            version = null;
         }
-        else if(version.equals("全部")){
-            list = topicDao.findAllTopicLabelLimit30((page-1)*topicSize,label,belong);
-            num = topicDao.findTopicTotalByLabel(label,belong);
-        }
-        else {
-            list = new ArrayList<>();
-            for (Topic item: topicDao.findAllTopicLabel(label,belong)) {
-                if (VersionUtil.match(version,item.getVersion())){
-                    num++;
-                    if (list.size() < topicSize && num > (page-1)*topicSize){
-                        list.add(item);
-                    }
-                }
-            }
-        }
-        return ResultMsg.success(list,num);
+        return topicRedis.getRedisTopics(belong,label,version,page);
     }
 
 
     public TopicOut getTopicInfo(String token,String id){
-        TopicOut topic = getRedisTopicOut(id);
+        TopicOut topic = topicRedis.getRedisTopicOut(id);
         if(topic == null){
             throw new ServiceException("ID_ERROR","主题:"+id+"不存在！");
         }
@@ -150,30 +125,26 @@ public class TopicService {
     }
 
 
-    public ResultMsg findAllTopicByUser(int page,String user,String token){
-        List<Topic> list;
-        int num = topicDao.findTopicTotalByUser(user);;
+    public Pair<List<Topic>,Integer> findAllTopicByUser(int page,String user,String token){
         if(token == null){
-            list = topicDao.findTopicByUserWhereDisplay((page-1)*10,user);
+            return Pair.of(
+                    topicRedis.getRedisUserTopics(user,page,false),
+                    topicRedis.getRedisUserTopicsCount(user,false)
+            );
         }
-        else{
-            String fromUser = jwtUtil.getTokenField(token,"USER");
-            if (fromUser.equals(user)){
-                list = topicDao.findTopicByUser((page-1)*20,user);
-            }
-            else{
-                list = topicDao.findTopicByUserWhereDisplay((page-1)*20,user);
-                num = topicDao.findTopicTotalByUserWhereDisplay(user);
-            }
-        }
-        return ResultMsg.success(list,num);
+        String fromUser = jwtUtil.getTokenField(token,"USER");
+
+        return Pair.of(
+                topicRedis.getRedisUserTopics(user,page,fromUser.equals(user)),
+                topicRedis.getRedisUserTopicsCount(user,fromUser.equals(user))
+        );
     }
 
     public ResultMsg getLike(String topicId,String token) {
         String user = jwtUtil.getTokenField(token,"USER");
-        LikeLog like = getRedisLikeLog(topicId,user);
+        LikeLog like = topicRedis.getRedisLikeLog(topicId,user);
         if(like != null && like.getStatus() == 1){
-            return ResultMsg.warning("IS_LIKE",getRedisLikeCount(topicId));
+            return ResultMsg.warning("IS_LIKE",topicRedis.getRedisLikeCount(topicId));
         }
         else if(like != null && like.getStatus() == 2){
             return ResultMsg.warning("IS_DISLIKE");
@@ -185,36 +156,34 @@ public class TopicService {
         String user = jwtUtil.getTokenField(token,"USER");
         LocalDateTime ldt = LocalDateTime.now();
         String date = dateUtil.getDateTimeByFormat(ldt,"yyyy-MM-dd HH:mm:ss");
-        LikeLog likeObj = getRedisLikeLog(topicId,user);
+        LikeLog likeObj = topicRedis.getRedisLikeLog(topicId,user);
         if(likeObj != null){
             if(likeObj.getStatus() != like){
-                setRedisLike(topicId,user,likeObj,like,date);
+                topicRedis.setRedisLike(topicId,user,likeObj,like,date);
                 topicDao.updateLikeStateByTopicAndUser(topicId,user,like,date);
-                setRedisLikeCount(topicId,like == 1);
+                topicRedis.setRedisLikeCount(topicId,like == 1);
                 return like == 1
-                        ? ResultMsg.warning("UPDATE_LIKE",getRedisLikeCount(topicId))
+                        ? ResultMsg.warning("UPDATE_LIKE",topicRedis.getRedisLikeCount(topicId))
                         : ResultMsg.warning("UPDATE_LIKE");
             }
-            setRedisLike(topicId,user,likeObj,0,date);
-            setRedisLikeCount(topicId,false);
+            topicRedis.setRedisLike(topicId,user,likeObj,0,date);
+            topicRedis.setRedisLikeCount(topicId,false);
             topicDao.updateLikeStateByTopicAndUser(topicId,user,0,date);
             return ResultMsg.warning("ALREADY_LIKE");
         }
-        setRedisLikeCount(topicId,like == 1);
-        setRedisLike(topicId,user,likeObj,like,date);
-        topicDao.insertLike(topicId,user,like,date);
+        topicRedis.setRedisLikeCount(topicId,like == 1);
+        likeObj = new LikeLog(topicId,user,like,date);
+        topicRedis.setRedisLike(topicId,user,likeObj,like,date);
+        topicDao.insertLike(likeObj);
         return like == 1
-                ? ResultMsg.warning("LIKE_SUCCESS",getRedisLikeCount(topicId))
+                ? ResultMsg.warning("LIKE_SUCCESS",topicRedis.getRedisLikeCount(topicId))
                 : ResultMsg.warning("LIKE_SUCCESS");
     }
 
 
     public ResultMsg findCommentByTopicId(String id,int page){
-        List<CommentVO> list = topicDao.findCommentByTopicId(id,(page-1)*10);
-        for (CommentVO item : list){
-            item.setExp(Exp.getMaxExp(item.getLevel()));
-        }
-        return ResultMsg.success(list,topicDao.findCommentCountByTopicId(id));
+        List<CommentVO> list = topicRedis.getRedisComments(id,page);
+        return ResultMsg.success(list,topicRedis.getRedisCommentsCount(id));
     }
 
     public ResultMsg appendComment( String topicId, String token, String content, String code){
@@ -226,9 +195,12 @@ public class TopicService {
             if(!sennsitiveList.isEmpty()){
                 throw new ServiceException("SENSITIVE_ERROR","包含敏感词"+sennsitiveList);
             }
+            int count = topicRedis.getRedisCommentsCount(topicId);
             topicDao.insertComment(topicId,user,date,content,0);
-            updateHomeFirstTopic("firstCommentTopic",getRedisTopicOut(topicId).parseTopic());
-            int count = topicDao.findCommentCountByTopicId(topicId);
+            topicRedis.setRedisCommentsCount(topicId,true);
+            topicRedis.updateHomeFirstTopic(topicRedis.getRedisTopicOut(topicId).parseTopic(),"topic","firstCommentTopic");
+            count++;
+            topicRedis.setRedisComments(new CommentVO(topicId,user,date,content,0),true,count);
             topicDao.updateTopicComment(count,date,topicId);
             if(redisUtil.hasKey("topic:cache:"+topicId)){
                 TopicOut topic = redisUtil.get("topic:cache:"+topicId,TopicOut.class);
@@ -243,12 +215,15 @@ public class TopicService {
 
     public ResultMsg deleteComment(String id,String token,String date){
         String user = jwtUtil.getTokenField(token,"USER");
+        int count = topicRedis.getRedisCommentsCount(id);
         int status1 = topicDao.deleteComment(id,user,date);
-        int count = topicDao.findCommentCountByTopicId(id);
-        if(redisUtil.hasKey("topic:cache:"+id)){
-            TopicOut topic = redisUtil.get("topic:cache:"+id,TopicOut.class);
+        topicRedis.setRedisCommentsCount(id,false);
+        count--;
+        topicRedis.setRedisComments(new CommentVO(id,user,date,null,0),false,count);
+        if(redisUtil.hasKey("topic:cache",id)){
+            TopicOut topic = redisUtil.get(redisUtil.joinKey("topic:cache",id), TopicOut.class);
             topic.setComment(count);
-            redisUtil.set("topic:cache:"+id,topic);
+            redisUtil.set(redisUtil.joinKey("topic:cache",id), topic);
         }
         int status2 = topicDao.updateTopicComment(count,dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss"),id);
         return status1+status2 == 2 ? ResultMsg.success(count) : ResultMsg.error("DELETE_ERROR");
@@ -257,7 +232,7 @@ public class TopicService {
     @Transactional(rollbackFor = Exception.class)
     public ResultMsg appendTopic(String token, TopicDTO topicDTO){
         String user = jwtUtil.getTokenField(token,"USER");
-        User userObj = userService.findRedisUser(user);
+        User userObj = userRedis.findRedisUser(user);
         int level = userObj.getLevel();
         if(level < 5){
             return ResultMsg.error("LEVEL_ERROR");
@@ -270,6 +245,10 @@ public class TopicService {
             LocalDateTime ldt = LocalDateTime.now();
             String id = dateUtil.getDateTimeByFormat(ldt,"yyyyMMddHHmmssSSSS")+ CodeUtil.getCode(6);
             String date = dateUtil.getDateTimeByFormat(ldt,"yyyy-MM-dd HH:mm:ss");
+            //清除版本号问题
+            if(topicDTO.getVersion() == null || topicDTO.getVersion().isEmpty() || topicDTO.getVersion().isBlank()){
+                topicDTO.setVersion("");
+            }
             if (topicDTO.getDisplay() != 0 && topicDTO.getDisplay() != 1){
                 topicDTO.setDisplay(0);
             }
@@ -290,7 +269,6 @@ public class TopicService {
                     topicDTO.getDisplay() == 1 ? 1 : 0
             );
             topicDao.insertTopic(topic);
-
             String filename = id+".md";
             String fileFolder = "user/"+user+"/topic/"+id;
             MultipartFile file = new MultipartFileImpl(topicDTO.getContent(),filename);
@@ -301,7 +279,10 @@ public class TopicService {
                 e.printStackTrace();
                 throw new ServiceException("UPLOAD_ERROR","上传文件失败");
             }
-            topicDao.insertTopicItem(
+            topicRedis.deleteRedisTopics(topic.getBelong(),topic.getLabel(),topic.getVersion());
+            topicRedis.setRedisUserTopicCount(user,true,topic);
+            topicRedis.setRedisUserTopic(user);
+            TopicItem topicItem = new TopicItem(
                     id,
                     topicDTO.getTopicTitle(),
                     topicDTO.getEnTitle(),
@@ -312,12 +293,14 @@ public class TopicService {
                     topicDTO.getDownload(),
                     fileFolder + "/" + filename
             );
+            topicDao.insertTopicItem(topicItem);
             int addExp = 0;
             if(topicDTO.getDisplay() == 1){
-                updateHomeFirstTopic("topic:firstRefreshTopic",topic);
-                updateHomeFirstTopic("topic:firstPublicTopic",topic);
+                topicRedis.updateHomeFirstTopic(topic,"topic","firstRefreshTopic");
+                topicRedis.updateHomeFirstTopic(topic,"topic","firstPublicTopic");
                 addExp = addExpFunc(token,100,200,userObj);
             }
+            topicRedis.setRedisTopicOut(new TopicOut(topic,topicItem,userObj,userRedis.findRedisUserPersonalized(user)));
             searchService.saveTopic(
                     new Search(
                             id,
@@ -341,8 +324,11 @@ public class TopicService {
 
     public ResultMsg isPromiseToEditTopic(String token,String id){
         String user = jwtUtil.getTokenField(token,"USER");
-        String topicUser = topicDao.findTopicUserById(id);
-        if(user.equals(topicUser)){
+        TopicOut topic = topicRedis.getRedisTopicOut(id);
+        if(topic == null){
+            return ResultMsg.error("NULL_ERROR");
+        }
+        if(user.equals(topic.getUser())){
             return ResultMsg.success();
         }
         return ResultMsg.error("REJECT");
@@ -354,7 +340,7 @@ public class TopicService {
         if(r.getMsg().equals("REJECT")){
             return r;
         }
-        TopicOut topicOut = getRedisTopicOut(id);
+        TopicOut topicOut = topicRedis.getRedisTopicOut(id);
         //为了获取最大经验值
         topicOut.setMaxExp(Exp.getMaxExp(topicOut.getLevel()));
         if(topicOut == null){
@@ -366,16 +352,20 @@ public class TopicService {
     @Transactional(rollbackFor = Exception.class)
     public ResultMsg updateTopic(String token, TopicDTO topicDTO){
         String user = jwtUtil.getTokenField(token,"USER");
-        User userObj = userService.findRedisUser(user);
+        User userObj = userRedis.findRedisUser(user);
         ResultMsg r = isPromiseToEditTopic(token, topicDTO.getId());
         if(r.getMsg().equals("REJECT")){
             return r;
         }
         if(codeUtil.checkCode(topicDTO.getCode())){
+            TopicOut data = topicRedis.getRedisTopicOut(topicDTO.getId());
+            if (data == null){
+                return ResultMsg.error("NULL_ERROR");
+            }
             ContentUtil.checkContentSensitive(topicDTO);
             LocalDateTime ldt = LocalDateTime.now();
             String date = dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss");
-            TopicOut topicOut = getRedisTopicOut(topicDTO.getId());
+            TopicOut topicOut = topicRedis.getRedisTopicOut(topicDTO.getId());
             int isFirstPublic = 1;
             boolean isPublicExp = false;
             if(topicOut.getDisplay() != -1){
@@ -431,25 +421,29 @@ public class TopicService {
                     topicDTO.getDownload(),
                     fileFolder + "/" + filename
             );
-            TopicOut data = getRedisTopicOut(topicDTO.getId());
-            if (data == null){
-                return ResultMsg.error("NULL_ERROR");
-            }
-
-
             int status1 = topicDao.updateTopicExpectCommentAndView(topic);
             if(topicDTO.getDisplay() == 1){
-                updateHomeFirstTopic("topic:firstRefreshTopic",topic);
+                topicRedis.updateHomeFirstTopic(topic,"topic","firstRefreshTopic");
             }
             int addExp = 0;
             if(isPublicExp){
                 addExp = addExpFunc(token,100,200,userObj);
-                updateHomeFirstTopic("topic:firstPublicTopic",topic);
+                topicRedis.updateHomeFirstTopic(topic,"topic","firstPublicTopic");
             }
             int status2 = topicDao.updateTopicItem(topicItem);
             if (data.getDisplay() != -1){
                 topicDao.updateTopicDisplay(topicDTO.getDisplay(), topicDTO.getId());
             }
+            var topicOutUpdated = new TopicOut(topic,topicItem,userObj,userRedis.findRedisUserPersonalized(user));
+//            优先清除旧的缓存，避免更新后用户访问到旧数据
+            topicRedis.deleteRedisTopics(data.getBelong(),data.getLabel(),data.getVersion());
+            topicRedis.setRedisUserTopicCount(user,true,null);
+            topicRedis.setRedisUserTopic(user);
+//            根据标签和版本号是否改变来决定是否清除相关列表缓存，减少不必要的缓存清除
+            if(!data.getLabel().equals(topicDTO.getLabel()) || !data.getVersion().equals(topicDTO.getVersion())){
+                topicRedis.deleteRedisTopics(topic.getBelong(),topic.getLabel(),topic.getVersion());
+            }
+            topicRedis.setRedisTopicOut(topicOutUpdated);
             searchService.saveTopic(new Search(
                     topicDTO.getId(),
                     topicDTO.getTitle(),
@@ -458,7 +452,7 @@ public class TopicService {
                     topicDTO.getTopicTitle(),
                     topicDTO.getEnTitle(),
                     ContentUtil.parseContent(topicDTO.getContent()),
-                    LocalDate.parse(topic.getDate()),
+                    LocalDate.parse(topic.getDate().split(" ")[0]),
                     ldt,
                     userObj.getUser(),
                     userObj.getName(),
@@ -476,13 +470,17 @@ public class TopicService {
             return r;
         }
         String user = jwtUtil.getTokenField(token,"USER");
+        TopicOut topicOut = topicRedis.getRedisTopicOut(id);
         int status1 = topicDao.deleteTopicItem(id);
         int status2 = topicDao.deleteTopic(id);
         topicDao.deleteTopicGalleryById(id);
         topicDao.deleteCommentByTopicId(id);
-        if(redisUtil.hasKey("topic:cache:"+id)){
-            redisUtil.delete("topic:cache:"+id);
-        }
+//        使用通配符删除缓存
+        redisUtil.deleteBatch(redisUtil.joinKey("topic:cache",id,"*"));
+        topicRedis.deleteRedisTopics(topicOut.getBelong(),topicOut.getLabel(),topicOut.getVersion());
+        Topic topic = topicOut.parseTopic();
+        topicRedis.setRedisUserTopicCount(user,false,topic);
+        topicRedis.setRedisUserTopic(user);
         topicDao.deleteLikeLog(id);
         fileService.removeFolder("user/"+user+"/topic/"+id);
         searchService.deleteById(id);
@@ -546,7 +544,6 @@ public class TopicService {
                 for (String field : fields) {
                     List<String> highlights = highlightResult.get(field);
                     if (highlights != null && !highlights.isEmpty()) {
-                        System.out.println(field);
                         if(field.equals("content")){
                             parseContent = false;
                         }
@@ -573,11 +570,11 @@ public class TopicService {
     @RequireRole({"admin","resource_moderator","talk_moderator"})
     public void adjustTopicDisplay(String id,String reason,int display,String token,String noticeId){
         String user = jwtUtil.getTokenField(token,"USER");
-        User userObj = userService.findRedisUser(user);
+        User userObj = userRedis.findRedisUser(user);
         if(userObj == null){
             throw new ServiceException("NO_EXIST_USER","用户不存在");
         }
-        Topic topic = topicDao.findTopicById(id);
+        TopicOut topic = topicRedis.getRedisTopicOut(id);
         if(topic == null){
             throw new ServiceException("NO_EXIST_TOPIC","主题不存在");
         }
@@ -600,12 +597,10 @@ public class TopicService {
             }
         }
         if(topic.getDisplay() != display){
+            TopicOut topicOut = topicRedis.getRedisTopicOut(id);
             topicDao.updateTopicDisplay(display,id);
-            if(redisUtil.hasKey("topic:cache:"+id)){
-                TopicOut topicOut = redisUtil.get("topic:cache:"+id,TopicOut.class);
-                topicOut.setDisplay(display);
-                redisUtil.set("topic:cache:"+id,topicOut);
-            }
+            topicOut.setDisplay(display);
+            topicRedis.setRedisTopicOut(topicOut);
             Search search = new Search();
             search.setId(id);
             search.setStatus(display);
@@ -618,16 +613,13 @@ public class TopicService {
         TopicNoticeAction topicNoticeAction = new TopicNoticeAction(id,topic.getTitle(),display,user,reason,false);
         userNoticeService.insertNotice(topic.getUser(),UserNoticeType.topic,
                 "帖子状态有更新",JsonOperate.toJson(topicNoticeAction,false));
-//                    messageService.SendMessage(token,topic.getUser(),
-//                            "您的帖子<a href=\"/topic/detail/"+topic.getId()+"\" target=\"_blank\">"+topic.getTitle()+"</a>已被 <a href=\"/personal/other/"+userObj.getUser()+"\" target=\"_blank\">"+userObj.getName()+"</a> 设置为"+(display == -1 ? " <span style=\"color: darkred;\">待整改</span>" : " <span style=\"color: darkgreen;\">已发布</span>")+" 状态。<br/>原因："+reason );
-
     }
 
     @Transactional
     public void topicRectificationComplete(String noticeId,String topicId,String token){
         log.info("topicRectificationComplete({},{})",noticeId,topicId);
         String user = jwtUtil.getTokenField(token,"USER");
-        Topic topic = topicDao.findTopicById(topicId);
+        TopicOut topic = topicRedis.getRedisTopicOut(topicId);
         if(topic == null){
             throw new ServiceException("NO_EXIST_TOPIC","帖子不存在");
         }
@@ -659,15 +651,15 @@ public class TopicService {
 
     public ResultMsg findCollectStatus(String id,String token){
         String user = jwtUtil.getTokenField(token,"USER");
-        if (topicDao.existCollection(user,id) > 0){
-            return ResultMsg.success(true,topicDao.findCollectionTotalById(id));
+        if (topicRedis.getRedisCollection(user,id) != null){
+            return ResultMsg.success(true,topicRedis.getRedisCollectionCountOnTopic(id));
         }
         return ResultMsg.success(false);
     }
 
     public Pair<List<Topic>,Integer> findAllCollection(int page, String token){
         String user = jwtUtil.getTokenField(token,"USER");
-        UserPersonalized userPersonalized = userService.findRedisUserPersonalized(user);
+        UserPersonalized userPersonalized = userRedis.findRedisUserPersonalized(user);
         if (userPersonalized == null){
             throw new ServiceException("NO_EXIST_USER","不存在该用户");
         }
@@ -675,34 +667,45 @@ public class TopicService {
     }
 
     private Pair<List<Topic>,Integer> findUserCollections(String user,int page){
-        List<Topic> topics = topicDao.findCollectByUser(user,(page - 1)*20);
-        int count = topicDao.countCollectByUser(user);
+        List<Topic> topics = topicRedis.getRedisCollectionTopics(user,page);
+        int count = topicRedis.getRedisCollectionCount(user);
         return Pair.of(topics,count);
     }
 
     @Transactional
     public ResultMsg setCollectionStatus(String id,String token){
         String user = jwtUtil.getTokenField(token,"USER");
-        User userObj = userService.findRedisUser(user);
+        User userObj = userRedis.findRedisUser(user);
         if (userObj != null){
-            Collection collection = topicDao.findCollection(user,id);
+            Collection collection = topicRedis.getRedisCollection(user,id);
             int status;
             String msg;
-            if (collection != null){
+            log.info("setCollectionStatus({})",collection);
+            if (collection != null && collection.getDate() != null && !collection.getDate().isEmpty()){
+                topicRedis.setRedisCollectionCount(user,false);
+                topicRedis.setRedisCollectionCountOnTopic(id,false);
                 status = topicDao.deleteCollect(user,id);
+                topicRedis.removeRedisCollectionTopics(user,id);
+                topicRedis.removeRedisCollection(user,id);
+
                 msg = "CANCEL";
             }
             else{
-                status = topicDao.appendCollect(user,id, dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss"));
+                topicRedis.setRedisCollectionCount(user,true);
+                topicRedis.setRedisCollectionCountOnTopic(id,true);
+                collection = new Collection(id,user,dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss"));
+                status = topicDao.appendCollect(collection);
+                topicRedis.addRedisCollectionTopics(user,getTopicInfo(token,id).parseTopic());
+                topicRedis.addRedisCollection(collection);
                 msg = "COLLECT";
             }
-            return status == 1 ? ResultMsg.success(msg,topicDao.findCollectionTotalById(id)) : ResultMsg.error("ERROR");
+            return status == 1 ? ResultMsg.success(msg,topicRedis.getRedisCollectionCountOnTopic(id)) : ResultMsg.error("ERROR");
         }
         return ResultMsg.error("NO_EXIST_USER");
     }
 
     public Pair<List<Topic>,Integer> findOtherCollection(String user,int page){
-        UserPersonalized userPersonalized = userService.findRedisUserPersonalized(user);
+        UserPersonalized userPersonalized = userRedis.findRedisUserPersonalized(user);
         if(userPersonalized == null){
             throw new ServiceException("USER_NOT_EXIST","用户不存在");
         }
@@ -749,18 +752,18 @@ public class TopicService {
     }
 
     public ResultMsg findTopicGallery(String id){
-        return ResultMsg.success(topicDao.findTopicGalleryByTopicId(id));
+        return ResultMsg.success(topicDao.findTopicGalleryByTopicId(id),topicRedis.getRedisTopicGalleryCount(id));
     }
 
     public ResultMsg uploadTopicGallery(String id,String label,String imgBase64,String token){
         String user = jwtUtil.getTokenField(token,"USER");
-        User userObj = userService.findRedisUser(user);
+        User userObj = userRedis.findRedisUser(user);
         ResultMsg r = isPromiseToEditTopic(token,id);
         if(userObj != null){
             if(r.getMsg().equals("REJECT")){
                 return r;
             }
-            int total = topicDao.countTopicGalleryByTopicId(id);
+            int total = topicRedis.getRedisTopicGalleryCount(id);
             //等级制度：普通用户只能上传5张图片，3级用户可以上传8张图片，5及以上用户可以上传10张图片
             if(userObj.getLevel() < 3 && total >= 5 || userObj.getLevel() >= 3 && userObj.getLevel() < 5 && total >= 8 || userObj.getLevel() >= 5 && total >= 10){
                 return ResultMsg.error("GALLERY_FULL");
@@ -778,6 +781,8 @@ public class TopicService {
             if(uploadResult.getMsg().equals("SUCCESS")){
                 TopicGallery topicGallery = new TopicGallery(galleryId,id,user,dateUtil.getDateTimeByFormat(ldt,"yyyy-MM-dd HH:mm:ss"),fileFolder+filename,label);
                 topicDao.insertTopicGallery(topicGallery);
+                topicRedis.setRedisTopicGalleryCount(id,true);
+                topicRedis.setRedisTopicGallery(topicGallery,true);
                 return ResultMsg.success(topicGallery);
             }
             return ResultMsg.error("UPLOAD_ERROR");
@@ -787,15 +792,18 @@ public class TopicService {
 
     public ResultMsg deleteTopicGallery(String id,String topicId,String token) {
         String user = jwtUtil.getTokenField(token,"USER");
-        User userObj = userService.findRedisUser(user);
+        User userObj = userRedis.findRedisUser(user);
         ResultMsg r = isPromiseToEditTopic(token, topicId);
         if (userObj != null) {
             if (r.getMsg().equals("REJECT")) {
                 return r;
             }
-            TopicGallery topicGallery = topicDao.findTopicGalleryById(id);
+            var topicGalleries = topicRedis.getRedisTopicGallery(topicId);
+            TopicGallery topicGallery = topicGalleries.stream().filter(g -> g.getId().equals(id)).findFirst().orElse(null);
             if (topicGallery != null) {
                 int status = topicDao.deleteTopicGalleryById(id);
+                topicRedis.setRedisTopicGalleryCount(topicId,false);
+                topicRedis.setRedisTopicGallery(topicGallery,false);
                 if (status == 1) {
                     fileService.removeFile(topicGallery.getPath());
                     return ResultMsg.success();
@@ -813,34 +821,39 @@ public class TopicService {
             return r;
         }
         int count = topicDao.findCommentTopCountByTopicId(commentVO.getTopicId());
-        if(commentVO.getWeight() != 0 &&count >= 3){
+        if(commentVO.getWeight() != 0 && count >= 3){
             return ResultMsg.error("TOP_FULL");
         }
         Comment comment = topicDao.findCommentByUserAndTopicIdAndDate(commentVO.getUser(), commentVO.getTopicId(), commentVO.getDate());
+        int status = 0;
+        boolean isTop = comment.getWeight() != 0;
         if(comment.getWeight() != 0){
-            int status = topicDao.updateCommentWeight(commentVO.getTopicId(), commentVO.getUser(), commentVO.getDate(),0);
-            return status == 1 ? ResultMsg.success(false) : ResultMsg.error("ERROR");
+            status = topicDao.updateCommentWeight(commentVO.getTopicId(), commentVO.getUser(), commentVO.getDate(),0);
         }
         else{
-            int status = topicDao.updateCommentWeight(commentVO.getTopicId(), commentVO.getUser(), commentVO.getDate(), commentVO.getWeight());
-            return status == 1 ? ResultMsg.success(true) : ResultMsg.error("ERROR");
+            status = topicDao.updateCommentWeight(commentVO.getTopicId(), commentVO.getUser(), commentVO.getDate(), commentVO.getWeight());
         }
+        topicRedis.setRedisTopComment(commentVO.getTopicId());
+        return status == 1 ? ResultMsg.success(isTop) : ResultMsg.error("ERROR");
+    }
+
+    public List<CommentVO> findTopComment(String id){
+        return topicRedis.getRedisTopComment(id);
     }
 
     public ResultMsg findTopicFiles(String topicId){
-        System.out.println(topicId);
-        return ResultMsg.success(topicDao.findTopicFilesByTopicId(topicId));
+        return ResultMsg.success(topicRedis.getRedisTopicFiles(topicId),topicRedis.getRedisTopicFilesCount(topicId));
     }
 
     public ResultMsg uploadTopicFile(String id, String fileName, String fileLabel, String fileBase64, String token){
         String user = jwtUtil.getTokenField(token,"USER");
-        User userObj = userService.findRedisUser(user);
+        User userObj = userRedis.findRedisUser(user);
         if(userObj != null) {
-            String topicUser = topicDao.findTopicUserById(id);
-            if (!user.equals(topicUser)) {
-                return ResultMsg.error("REJECT");
+            ResultMsg r = isPromiseToEditTopic(token, id);
+            if (r.getMsg().equals("REJECT")) {
+                return r;
             }
-            int total = topicDao.countTopicFileByTopicId(id);
+            int total = topicRedis.getRedisTopicFilesCount(id);
             if (total >= 3) {
                 return ResultMsg.error("FILE_FULL");
             }
@@ -852,8 +865,10 @@ public class TopicService {
             if(!isInfected){
                 return ResultMsg.error("INFECTED");
             }
-            topicDao.insertTopicFile(topicFile);
             fileService.upload(file,fileFolder,filename);
+            topicDao.insertTopicFile(topicFile);
+            topicRedis.setRedisTopicFilesCount(id,true);
+            topicRedis.setRedisTopicFiles(topicFile,true);
             return ResultMsg.success(topicFile);
         }
         return ResultMsg.error("NO_LOGIN");
@@ -861,16 +876,19 @@ public class TopicService {
 
     public ResultMsg deleteTopicFile(String id,String topicId,String token) {
         String user = jwtUtil.getTokenField(token,"USER");
-        User userObj = userService.findRedisUser(user);
+        User userObj = userRedis.findRedisUser(user);
         ResultMsg r = isPromiseToEditTopic(token, topicId);
         if (userObj != null) {
             if (r.getMsg().equals("REJECT")) {
                 return r;
             }
-            TopicFile topicFile = topicDao.findTopicFileById(id);
+            var cached = topicRedis.getRedisTopicFiles(topicId);
+            TopicFile topicFile = cached.stream().filter(f -> f.getId().equals(id)).findFirst().orElse(null);
             if (topicFile != null) {
                 fileService.removeFile("user/" + user + "/topic/" + topicId + "/file/" + topicFile.getId());
                 int status = topicDao.deleteTopicFileById(id);
+                topicRedis.setRedisTopicFilesCount(topicId,false);
+                topicRedis.setRedisTopicFiles(topicFile,false);
                 return status == 1 ? ResultMsg.success() : ResultMsg.error("DELETE_ERROR");
             }
             return ResultMsg.error("NO_EXIST_FILE");
@@ -905,77 +923,16 @@ public class TopicService {
             exp = expDiff;
             level++;
         }
-        userDao.updateExp(user.getUser(),exp,level,dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss"));
+        String date = dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss");
+        userDao.updateExp(user.getUser(),exp,level,date);
+        user.setExp(exp);
+        user.setLevel(level);
+        user.setUpdateTime(date);
+        userRedis.setRedisUser(user.getUser(),user);
         UserVO userVO = user.toUserVO();
-        userVO.setExp(exp);
-        userVO.setLevel(level);
         userVO.setMaxExp(Exp.getMaxExp(level));
         redisUtil.set("onlineUser:"+token, userVO);
         return addExp;
-    }
-
-    public void updateHomeFirstTopic(String key,Topic topic){
-        redisUtil.opsForList().leftPush(key,topic);
-        redisUtil.opsForList().rightPop(key);
-    }
-
-    public TopicOut getRedisTopicOut(String id){
-        TopicOut topic;
-        if(redisUtil.hasKey("topic:cache:"+id)){
-            topic =  redisUtil.get("topic:cache:"+id,TopicOut.class);
-        }
-        else{
-            topic = topicDao.findTopicInfoById(id);
-            redisUtil.set("topic:cache:"+id,topic,1,TimeUnit.HOURS);
-        }
-        return topic;
-    }
-
-    public LikeLog getRedisLikeLog(String id,String user){
-        LikeLog like;
-        if(redisUtil.hasKey("topic:like:"+id+":"+user)){
-            like = redisUtil.get("topic:like:"+id+":"+user,LikeLog.class);
-        }
-        else{
-            like = topicDao.findLikeByTopicAndUser(id,user);
-            redisUtil.set("topic:like:"+id+":"+user,like,1,TimeUnit.HOURS);
-        }
-        return like;
-    }
-
-    public int setRedisLike(String id,String user,LikeLog likeObj,int like,String date){
-        if(redisUtil.hasKey("topic:like:"+id+":"+user)){
-            if(likeObj == null){
-                likeObj = getRedisLikeLog(id,user);
-            }
-            likeObj.setStatus(like);
-            likeObj.setDate(date);
-            redisUtil.set("topic:like:"+id+":"+user,likeObj);
-        }
-        return like;
-    }
-
-    public int getRedisLikeCount(String id){
-        int count = 0;
-        if(redisUtil.hasKey("topic:likeCount:"+id)){
-            count = redisUtil.get("topic:likeCount:"+id,Integer.class);
-        }
-        else{
-            count = topicDao.findLikeTotalByTopic(id);
-            redisUtil.set("topic:likeCount:"+id,count,1,TimeUnit.HOURS,true);
-        }
-        return count;
-    }
-
-    public void setRedisLikeCount(String id,boolean like) {
-        if(redisUtil.hasKey("topic:likeCount:"+id)){
-            if(like){
-                redisUtil.opsForValue().increment("topic:likeCount:"+id);
-            }
-            else{
-                redisUtil.opsForValue().decrement("topic:likeCount:"+id);
-            }
-        }
     }
 
 }

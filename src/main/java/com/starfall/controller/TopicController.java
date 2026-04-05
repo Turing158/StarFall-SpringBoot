@@ -18,7 +18,8 @@ public class TopicController {
 //    @PostMapping("/findAllTopic")
     @PostMapping("/item/find")
     public ResultMsg findAllTopic(int page, String label, String version, String belong) {
-        return topicService.findAllTopic(page, label, version, belong);
+        var r = topicService.findAllTopic(page, label, version, belong);
+        return ResultMsg.success(r.getFirst(),r.getSecond());
     }
 
 
@@ -32,7 +33,8 @@ public class TopicController {
 //    @PostMapping("/findAllTopicByUser")
     @PostMapping("/user/find")
     public ResultMsg findAllTopicByUser(int page, String user, @RequestHeader(name = "Authorization", required = false) String token) {
-        return topicService.findAllTopicByUser(page, user, token);
+        var r = topicService.findAllTopicByUser(page, user, token);
+        return ResultMsg.success(r.getFirst(),r.getSecond());
     }
 
 //    @PostMapping("/getLike")
@@ -198,10 +200,16 @@ public class TopicController {
     }
 
 //    @PostMapping("/topTopicComment")
-    @PostMapping("/comment/top")
+    @PostMapping("/comment/top/update")
     public ResultMsg topTopicComment(@RequestBody CommentVO comment, @RequestHeader("Authorization") String token) {
         return topicService.topTopicComment(comment, token);
     }
+
+    @PostMapping("/comment/top/find")
+    public ResultMsg findTopComment(String id) {
+        return ResultMsg.success(topicService.findTopComment(id));
+    }
+
 
 //    @PostMapping("/findTopicFiles")
     @PostMapping("/files/find")
