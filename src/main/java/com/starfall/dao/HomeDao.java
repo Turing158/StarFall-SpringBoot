@@ -10,9 +10,6 @@ public interface HomeDao {
     @Select("select * from starfall.home_talk join starfall.user u on home_talk.user = u.user order by date desc limit #{num},#{limit}")
     List<HomeTalk> findAllHomeTalk(int num,int limit);
 
-    @Select("select * from starfall.home_talk join starfall.user u on home_talk.user = u.user order by date desc limit 80")
-    List<HomeTalk> findLast80HomeTalk();
-
     @Select("select * from starfall.home_talk where user=#{user} and date = #{date}")
     HomeTalk findHomeTalkByUserAndDate(String user,String date);
 
@@ -22,11 +19,11 @@ public interface HomeDao {
     @Select("select count(*) from starfall.home_talk limit 1")
     int countHomeTalk();
 
-    @Insert("insert into starfall.home_talk values(#{user},#{content},#{date})")
+    @Insert("insert into starfall.home_talk values(#{id},#{user},#{content},#{date})")
     int insertHomeTalk(HomeTalk homeTalk);
 
-    @Delete("delete from starfall.home_talk where user=#{user} and date=#{date}")
-    int deleteHomeTalk(String user,String date);
+    @Delete("delete from starfall.home_talk where id=#{id}")
+    int deleteHomeTalk(String id);
 
     @Select("select * from starfall.advertisement where position=#{position} order by sequence")
     List<Advertisement> findAdvertisementByPosition(String position);

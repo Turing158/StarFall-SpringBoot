@@ -30,8 +30,8 @@ public class HomeController {
 
 //    @PostMapping("/deleteHomeTalk")
     @PostMapping("/talk/delete")
-    public ResultMsg deleteHomeTalk(String date,@RequestHeader("Authorization") String token){
-        return homeService.deleteHomeTalk(date,token);
+    public ResultMsg deleteHomeTalk(String id,@RequestHeader("Authorization") String token){
+        return homeService.deleteHomeTalk(id,token);
     }
 
 //    @PostMapping("/findAdvertisementByPosition")
