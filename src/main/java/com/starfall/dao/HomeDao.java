@@ -10,8 +10,8 @@ public interface HomeDao {
     @Select("select * from starfall.home_talk join starfall.user u on home_talk.user = u.user order by date desc limit #{num},#{limit}")
     List<HomeTalk> findAllHomeTalk(int num,int limit);
 
-    @Select("select * from starfall.home_talk where user=#{user} and date = #{date}")
-    HomeTalk findHomeTalkByUserAndDate(String user,String date);
+    @Select("select * from starfall.home_talk where user=#{user} and date(date) = curdate()")
+    HomeTalk findHomeTalkByUserAndDate(String user);
 
     @Select("select * from starfall.home_talk h join starfall.user u on h.user = u.user where h.user=#{user} order by date desc limit 0,1")
     HomeTalk findHomeTalk(String user);

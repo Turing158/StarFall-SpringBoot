@@ -49,10 +49,9 @@ public class HomeService {
 
         LocalDateTime ldt = LocalDateTime.now();
         HomeTalk talk = homeRedis.getRedisHomeTalkMapper(user,dateUtil.getDateTimeByFormat(ldt,"yyyy-MM-dd HH:mm:ss"));
-
         if(talk != null){
             LocalDateTime oldLdt = LocalDateTime.parse(talk.getDate(), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-            if(oldLdt.toLocalDate() == ldt.toLocalDate()){
+            if(oldLdt.toLocalDate().equals(ldt.toLocalDate())){
                 throw new ServiceException("REPEATED","重复发布");
             }
         }

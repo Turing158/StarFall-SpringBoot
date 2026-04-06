@@ -14,11 +14,4 @@ public class HomeTalk {
     String avatar;
     String content;
     String date;
-
-    public HomeTalk(String id, String user, String content, String date) {
-        this.id = id;
-        this.user = user;
-        this.content = content;
-        this.date = date;
-    }
 }

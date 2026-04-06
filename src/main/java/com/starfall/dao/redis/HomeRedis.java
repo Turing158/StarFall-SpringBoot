@@ -8,6 +8,8 @@ import com.starfall.util.RedisUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -23,16 +25,16 @@ public class HomeRedis {
 
     public List<HomeTalk> getRedisHomeTalks(int num){
         List<HomeTalk> homeTalks;
-
+        String key = redisUtil.joinKey("homeTalk:cache:data");
         if(num <= homeTalkCacheSize){
-            if(redisUtil.hasKey("homeTalks:cache:data")){
-                var cache = redisUtil.getList("homeTalks:cache:data", HomeTalk.class);
+            if(redisUtil.hasKey(key)){
+                var cache = redisUtil.getList(key, HomeTalk.class);
                 homeTalks = redisUtil.paginateByIndex(cache, num, homeTalkPageSize);
             }
             else{
                 var cache = homeDao.findAllHomeTalk(0,homeTalkCacheSize);
                 homeTalks = redisUtil.paginateByIndex(cache, num, homeTalkPageSize);
-                redisUtil.set("homeTalks:cache:data", cache, 1, TimeUnit.HOURS);
+                redisUtil.set(key, cache, 1, TimeUnit.HOURS);
             }
         }
         else{
@@ -42,8 +44,9 @@ public class HomeRedis {
     }
 
     public void setRedisHomeTalks(HomeTalk talk,boolean increment){
-        if(redisUtil.hasKey("homeTalks:cache:data")){
-            var cache = redisUtil.getList("homeTalks:cache:data", HomeTalk.class);
+        String key = redisUtil.joinKey("homeTalk:cache:data");
+        if(redisUtil.hasKey(key)){
+            var cache = redisUtil.getList(key, HomeTalk.class);
             if(increment){
                 cache.add(0,talk);
                 if(cache.size() > homeTalkCacheSize){
@@ -57,36 +60,38 @@ public class HomeRedis {
                     cache.addAll(cache.size(),newTalk);
                 }
             }
-            redisUtil.set("homeTalks:cache:data", cache);
+            redisUtil.set(key, cache);
         }
     }
 
     public int getRedisHomeTalkCount(){
         int count;
-        if(redisUtil.hasKey("homeTalks:cache:count")){
-            count = redisUtil.get("homeTalks:cache:count", Integer.class);
+        String key = redisUtil.joinKey("homeTalk:cache:count");
+        if(redisUtil.hasKey(key)){
+            count = redisUtil.get(key, Integer.class);
         }
         else {
             count = homeDao.countHomeTalk();
-            redisUtil.set("homeTalks:cache:count", count, 1, TimeUnit.HOURS);
+            redisUtil.set(key, count, 1, TimeUnit.HOURS);
         }
         return count;
     }
 
     public void setRedisHomeTalkCount(boolean increment){
-        if(redisUtil.hasKey("homeTalks:cache:count")){
-            redisUtil.incOrDec(increment, "homeTalks:cache:count");
+        String key = redisUtil.joinKey("homeTalk:cache:count");
+        if(redisUtil.hasKey(key)){
+            redisUtil.incOrDec(increment, key);
         }
     }
 
     public HomeTalk getRedisHomeTalk(String id){
-        String key = redisUtil.joinKey("homeTalks:cache:single",id);
+        String key = redisUtil.joinKey("homeTalk:cache:single",id);
         HomeTalk talk;
         if(redisUtil.hasKey(key)){
             talk = redisUtil.get(key, HomeTalk.class);
         }
         else{
-            String cacheDataKey = redisUtil.joinKey("homeTalks:cache:data");
+            String cacheDataKey = redisUtil.joinKey("homeTalk:cache:data");
             if(redisUtil.hasKey(cacheDataKey)){
                 var cache = redisUtil.getList(cacheDataKey, HomeTalk.class);
                 var talkCacheData = cache.stream().filter(t -> t.getId().equals(id)).findFirst();
@@ -101,7 +106,7 @@ public class HomeRedis {
     }
 
     public void setRedisHomeTalk(HomeTalk talk,boolean increment){
-        String key = redisUtil.joinKey("homeTalks:cache:single",talk.getId());
+        String key = redisUtil.joinKey("homeTalk:cache:single",talk.getId());
         if(redisUtil.hasKey(key)){
             if(increment){
                 redisUtil.set(key, talk);
@@ -114,19 +119,19 @@ public class HomeRedis {
 
     public HomeTalk getRedisHomeTalkMapper(String user,String date){
         HomeTalk talk;
-        String key = redisUtil.joinKey("homeTalk:user",user,date);
+        String key = redisUtil.joinKey("homeTalk:user",user,date.split(" ")[0]);
         if(redisUtil.hasKey(key)){
             talk = redisUtil.get(key,HomeTalk.class);
         }
         else{
-            talk = homeDao.findHomeTalkByUserAndDate(user,date);
+            talk = homeDao.findHomeTalkByUserAndDate(user);
             redisUtil.set(key, talk, 1, TimeUnit.HOURS);
         }
         return talk;
     }
 
     public void setRedisHomeTalkMapper(HomeTalk talk,boolean increment){
-        String key = redisUtil.joinKey("homeTalk:user",talk.getUser(),talk.getDate());
+        String key = redisUtil.joinKey("homeTalk:user",talk.getUser(), talk.getDate().split(" ")[0]);
         if(redisUtil.hasKey(key)){
             if(increment){
                 redisUtil.set(key, talk);
