@@ -4,10 +4,8 @@ import cn.hutool.dfa.SensitiveUtil;
 import com.starfall.Exception.ServiceException;
 import com.starfall.dao.HomeDao;
 import com.starfall.dao.redis.HomeRedis;
-import com.starfall.entity.Advertisement;
-import com.starfall.entity.HomeTalk;
-import com.starfall.entity.Notice;
-import com.starfall.entity.ResultMsg;
+import com.starfall.dao.redis.UserRedis;
+import com.starfall.entity.*;
 import com.starfall.util.CodeUtil;
 import com.starfall.util.DateUtil;
 import com.starfall.util.JwtUtil;
@@ -29,6 +27,8 @@ public class HomeService {
     @Autowired
     private HomeRedis homeRedis;
     @Autowired
+    UserRedis userRedis;
+    @Autowired
     RedisUtil redisUtil;
     @Autowired
     JwtUtil jwtUtil;
@@ -44,7 +44,7 @@ public class HomeService {
     }
 
     @Transactional
-    public void publicHomeTalk(String content,String token){
+    public HomeTalk publicHomeTalk(String content,String token){
         String user = jwtUtil.getTokenField(token,"USER");
 
         LocalDateTime ldt = LocalDateTime.now();
@@ -61,17 +61,22 @@ public class HomeService {
             throw new ServiceException("SENSITIVE_ERROR","包含敏感词");
         }
 //        HT202509151044492283c6ou
+        User userObj = userRedis.findRedisUser(user);
         var homeTalk = new HomeTalk(
-                "HT" + dateUtil.getDateTimeByFormat(ldt,"yyyyMMddHHmmssSSSS") + CodeUtil.getCode(4)
-                , user
-                ,content
-                ,dateUtil.getDateTimeByFormat(ldt,"yyyy-MM-dd HH:mm:ss")
+                "HT" + dateUtil.getDateTimeByFormat(ldt,"yyyyMMddHHmmssSSSS") + CodeUtil.getCode(4),
+                user,
+                userObj.getName(),
+                userObj.getAvatar(),
+                content,
+                dateUtil.getDateTimeByFormat(ldt,"yyyy-MM-dd HH:mm:ss")
         );
         homeRedis.setRedisHomeTalkCount(true);
         homeDao.insertHomeTalk(homeTalk);
         homeRedis.setRedisHomeTalk(homeTalk,true);
         homeRedis.setRedisHomeTalkMapper(homeTalk,true);
         homeRedis.setRedisHomeTalks(homeTalk,true);
+
+        return homeTalk;
     }
 
     public ResultMsg deleteHomeTalk(String id,String token){
