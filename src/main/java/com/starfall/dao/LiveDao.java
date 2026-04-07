@@ -10,11 +10,11 @@ import java.util.List;
 @Mapper
 public interface LiveDao {
 
-    @Select("select * from starfall.live_broadcast where status=1 order by apply_time desc limit ${index},10")
-    List<LiveBroadcastShow> findAllLiveShow(int index);
+    @Select("select * from starfall.live_broadcast where status=1 order by apply_time desc limit ${index},#{limit}")
+    List<LiveBroadcastShow> findAllLiveShow(int index,int limit);
 
-    @Select("select lb.*,o.name as operatorName from starfall.live_broadcast lb left join starfall.user o on lb.operator = o.user where lb.user=#{user} order by apply_time desc limit ${page},10")
-    List<LiveBroadcastHistory> findAllLiveByUser(String user, int page);
+    @Select("select lb.*,o.name as operatorName from starfall.live_broadcast lb left join starfall.user o on lb.operator = o.user where lb.user=#{user} order by apply_time desc limit ${index},#{limit}")
+    List<LiveBroadcastHistory> findAllLiveByUser(String user, int index,int limit);
 
     @Select("select count(*) from starfall.live_broadcast where user=#{user}")
     int countLiveByUser(String user);

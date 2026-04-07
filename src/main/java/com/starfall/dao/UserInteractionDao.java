@@ -19,8 +19,8 @@ public interface UserInteractionDao {
     @Select("select * from starfall.user_notice where id = #{id}")
     UserNotice findUserNoticeById(String id);
 
-    @Select("select * from starfall.user_notice where user=#{user} or type='all' order by create_time desc limit #{index},20")
-    List<UserNotice> findAllUserNotice(int index,String user);
+    @Select("select * from starfall.user_notice where user=#{user} or type='all' order by create_time desc limit #{index},#{limit}")
+    List<UserNotice> findAllUserNotice(String user,int index,int limit);
 
     @Select("select count(*) from starfall.user_notice where user=#{user} or type='all'")
     int countAllUserNotice(String user);
