@@ -2,6 +2,7 @@ package com.starfall.service;
 
 import cn.hutool.core.lang.Pair;
 import com.starfall.dao.UserInteractionDao;
+import com.starfall.dao.redis.UserInteractionRedis;
 import com.starfall.entity.ResultMsg;
 import com.starfall.entity.TopicNoticeAction;
 import com.starfall.entity.UserNotice;
@@ -10,7 +11,6 @@ import com.starfall.util.CodeUtil;
 import com.starfall.util.DateUtil;
 import com.starfall.util.JsonOperate;
 import com.starfall.util.JwtUtil;
-import io.jsonwebtoken.Claims;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
@@ -25,6 +25,8 @@ import java.util.List;
 public class UserNoticeService {
     @Autowired
     private UserInteractionDao userInteractionDao;
+    @Autowired
+    UserInteractionRedis userInteractionRedis;
     @Autowired
     private DateUtil dateUtil;
     @Autowired
@@ -42,6 +44,9 @@ public class UserNoticeService {
         String createTime = dateUtil.getDateTimeByFormat(ldt,"yyyy-MM-dd HH:mm:ss");
         UserNotice userNotice = new UserNotice(id,user,createTime,title,type,0,action);
         userInteractionDao.insertUserNotice(userNotice);
+        userInteractionRedis.setRedisUserNotice(user,userNotice,true);
+        userInteractionRedis.setRedisLastUserNotice(user,userNotice);
+        userInteractionRedis.setRedisUserNoticeUnreadCount(user,true);
         log.info("用户{}的通知{}已插入数据库，准备通过WebSocket推送",user,id);
         log.info("推送内容：{}", JsonOperate.toJson(userNotice));
         webSocketService.sendMessageToUser(user, JsonOperate.toJson(userNotice));
@@ -55,7 +60,9 @@ public class UserNoticeService {
             var action = JsonOperate.toObject(notice.getAction(), TopicNoticeAction.class);
             if(!action.isHandle()){
                 action.setHandle(true);
-                updateNoticeAction(notice.getId(),JsonOperate.toJson(action,false));
+                notice.setAction(JsonOperate.toJson(action,false));
+                updateNoticeAction(notice.getId(),notice.getAction());
+                userInteractionRedis.setRedisUserNotice(notice);
             }
         }
     }
@@ -64,7 +71,7 @@ public class UserNoticeService {
     public Pair<UserNotice, Integer> findLastNoticeAndUnreadNum(String token) {
         log.info("执行findLastNoticeAndUnreadNum");
         String user = jwtUtil.getTokenField(token,"USER");
-        return Pair.of(userInteractionDao.findLastNotice(user), userInteractionDao.findUnreadNum(user));
+        return Pair.of(userInteractionRedis.getRedisLastUserNotice(user), userInteractionRedis.getRedisUserNoticeUnreadCount(user));
     }
 
     //查询所有通知
@@ -74,24 +81,28 @@ public class UserNoticeService {
         if(index < 0){
             index = 0;
         }
-        return Pair.of(userInteractionDao.findAllUserNotice(index,user), userInteractionDao.countAllUserNotice(user));
+        return Pair.of(userInteractionRedis.getRedisUserNotice(user,index), userInteractionRedis.getRedisUserNoticeCount(user));
     }
 
     // 标记已读
     @Transactional
     public void markAsRead(List<UserNotice> userNotices, String token) {
-        log.info("执行markAsRead:userNotices={}",String.join(",",userNotices.stream().map(UserNotice::getId).toArray(String[]::new)));
+        var ids = userNotices.stream().map(UserNotice::getId).toArray(String[]::new);
+        log.info("执行markAsRead:userNotices={}",String.join(",",ids));
         String user = jwtUtil.getTokenField(token,"USER");
         if(userNotices.size() == 1){
             log.info("执行markAsRead单条:{}",userNotices.get(0).getId());
-            userInteractionDao.updateUserNoticeStatus(userNotices.get(0).getId(),1);
+            userInteractionRedis.setRedisUserNoticeRead(user,ids[0]);
+            userInteractionDao.updateUserNoticeStatus(ids[0],1);
         }
         else if(userNotices.size() > 1){
-            log.info("执行markAsRead批量:{}",String.join(",",userNotices.stream().map(UserNotice::getId).toArray(String[]::new)));
+            log.info("执行markAsRead批量:{}",String.join(",",ids));
+            userInteractionRedis.setRedisUserNoticeRead(user,ids);
             userInteractionDao.UpdateBatchUserNotice(userNotices);
         }
         else{
             log.info("执行markAsRead全部设置为已读");
+            userInteractionRedis.setRedisUserNoticeRead(user);
             userInteractionDao.updateUserNoticeStatus1ByUser(user);
         }
     }
@@ -115,7 +126,7 @@ public class UserNoticeService {
         return id != null ? userInteractionDao.findUserNoticeById(id) : null;
     }
 
-    //用于其他服务调用修改UserNotice
+    //用于调用修改UserNotice
     @Transactional
     public int updateNoticeAction(String id,String action){
         return userInteractionDao.updateUserNoticeAction(id,action);

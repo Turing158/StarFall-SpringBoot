@@ -30,8 +30,8 @@ public interface MedalDao {
             "case when mm.gain_time is not null then 0 else 1 end, " +
             "mm.gain_time desc ," +
             "mm.expire_time desc ," +
-            "m.create_time desc limit #{index},20")
-    List<MedalMapper> findAllMedal(String user,int index);
+            "m.create_time desc limit #{index},#{limit}")
+    List<MedalMapper> findAllMedal(String user,int index,int limit);
 
     //判断用户是否已经注册超过三年
     @Select("select count(*) from starfall.user where user = #{user} and create_time <= DATE_SUB(CURDATE(), interval 3 year);")

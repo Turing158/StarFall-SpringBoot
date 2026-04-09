@@ -6,11 +6,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.starfall.Exception.ServiceException;
 import com.starfall.dao.MedalDao;
 import com.starfall.dao.UserDao;
+import com.starfall.dao.redis.MedalRedis;
 import com.starfall.entity.*;
 import com.starfall.util.DateUtil;
 import com.starfall.util.JsonOperate;
 import com.starfall.util.JwtUtil;
-import io.jsonwebtoken.Claims;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
@@ -29,6 +29,8 @@ public class MedalService {
     @Autowired
     UserDao userDao;
     @Autowired
+    MedalRedis medalRedis;
+    @Autowired
     WebSocketService webSocketService;
     @Autowired
     UserNoticeService userNoticeService;
@@ -39,19 +41,19 @@ public class MedalService {
 
     public List<MedalMapper> findUserMedalOnMenu(String token){
         String user = jwtUtil.getTokenField(token,"USER");
-        return medalDao.findAllByUserLimit(user,0,3);
+        return medalRedis.getMedalOnPosition(user,true);
     }
 
     public List<MedalMapper> findUserMedal(String user){
-        return medalDao.findAllByUserLimit(user,0,11);
+        return medalRedis.getMedalOnPosition(user,false);
     }
 
     public List<MedalMapper> findAllMedal(String user,int page){
-        return medalDao.findAllMedal(user,(page-1)*20);
+        return medalRedis.getUserMedalAll(user,page);
     }
 
     public Medal findMedalById(String id){
-        return medalDao.findById(id);
+        return medalRedis.getMedalById(id);
     }
 
     @Async
@@ -171,7 +173,7 @@ public class MedalService {
     }
 
     private MedalMapper getMedalMapper(String id,String user){
-        Medal medal = medalDao.findById(id);
+        Medal medal = medalRedis.getMedalById(id);
         MedalMapper medalMapper = new MedalMapper();
         medalMapper.setId(id);
         medalMapper.setName(medal.getName());
@@ -189,6 +191,7 @@ public class MedalService {
 
     @Transactional
     public void insertMedalAndNotice(MedalMapper medalMapper,boolean isNewGain){
+        medalRedis.clearUserMedalCache(medalMapper.getUser());
         if(isNewGain){
             medalDao.insertMedalMapper(medalMapper);
         }

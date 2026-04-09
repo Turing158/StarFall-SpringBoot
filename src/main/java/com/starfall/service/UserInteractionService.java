@@ -4,10 +4,10 @@ import cn.hutool.core.lang.Pair;
 import cn.hutool.dfa.SensitiveUtil;
 import com.starfall.Exception.ServiceException;
 import com.starfall.dao.UserInteractionDao;
+import com.starfall.dao.redis.UserInteractionRedis;
 import com.starfall.dao.redis.UserRedis;
 import com.starfall.entity.*;
 import com.starfall.util.*;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,7 +22,6 @@ import java.util.Objects;
 @Slf4j
 public class UserInteractionService {
 
-    @Getter
     @Autowired
     UserInteractionDao userInteractionDao;
     @Autowired
@@ -31,6 +30,8 @@ public class UserInteractionService {
     UserNoticeService userNoticeService;
     @Autowired
     UserRedis userRedis;
+    @Autowired
+    UserInteractionRedis userInteractionRedis;
     @Autowired
     RedisUtil redisUtil;
     @Autowired
@@ -143,6 +144,8 @@ public class UserInteractionService {
         FriendRelation fromUserRelation = new FriendRelation(fromRelationId,application.getFromUser(),application.getToUser(),0,null,date,date,0);
         FriendRelation toUserRelation = new FriendRelation(toRelationId,application.getToUser(),application.getFromUser(),0,null,date,date,0);
         log.info("生成好友关系记录：fromRelationId={},toRelationId={}",fromRelationId,toRelationId);
+        userInteractionRedis.setRedisFriendRelation(fromUserRelation);
+        userInteractionRedis.setRedisFriendRelation(toUserRelation);
         userInteractionDao.insertFriendRelation(fromUserRelation,toUserRelation);
         log.info("提示用户{}，{}已同意添加你为好友",user,application.getFromUser());
         userNoticeService.insertNotice(application.getFromUser(),UserNoticeType.friend,"新好友","{\"user\":\""+user+"\",\"status\":1}");
@@ -172,7 +175,7 @@ public class UserInteractionService {
         if(fromUserObj == null){
             throw new ServiceException("USER_ERROR","用户"+fromUser+"不存在，且token存在伪造问题");
         }
-        FriendRelation friendRelation = userInteractionDao.findFriendRelation(toUser,fromUser);
+        FriendRelation friendRelation = userInteractionRedis.getRedisFriendRelation(toUser,fromUser);
         if(friendRelation.getRelation() == -1){
             throw new ServiceException("IS_BLACK","对方已将你加入黑名单，无法发送消息");
         }
@@ -209,7 +212,7 @@ public class UserInteractionService {
 
     public FriendRelation handleFriendExist(String token,String friend){
         String user = jwtUtil.getTokenField(token,"USER");
-        FriendRelation relation = userInteractionDao.findFriendRelation(user, friend);
+        FriendRelation relation = userInteractionRedis.getRedisFriendRelation(user, friend);
         if(relation == null){
             log.warn("用户{}尝试修改与{}的好友备注，但好友关系不存在",user,friend);
             throw new ServiceException("FRIEND_NOT_EXIST","好友关系不存在");
@@ -230,7 +233,10 @@ public class UserInteractionService {
         }
         log.info("执行updateFriendAlias:用户{}，friend={},alias={}",relation.getFromUser(),friend,alias);
         LocalDateTime ldt = LocalDateTime.now();
-        userInteractionDao.updateFriendAlias(relation.getFromUser(),friend,alias,dateUtil.getDateTimeByFormat(ldt,"yyyy-MM-dd HH:mm:ss"));
+        relation.setAlias(alias);
+        relation.setUpdateTime(dateUtil.getDateTimeByFormat(ldt,"yyyy-MM-dd HH:mm:ss"));
+        userInteractionDao.updateFriendAlias(relation.getFromUser(),friend,relation.getAlias(),relation.getUpdateTime());
+        userInteractionRedis.setRedisFriendRelation(relation);
     }
 
     @Transactional
@@ -241,7 +247,10 @@ public class UserInteractionService {
         }
         log.info("执行updateFriendTop:用户{}，friend={},isTop={}",relation.getFromUser(),friend,isTop);
         LocalDateTime ldt = LocalDateTime.now();
-        userInteractionDao.updateFriendIsTop(relation.getFromUser(),friend,isTop ? 1 : 0,dateUtil.getDateTimeByFormat(ldt,"yyyy-MM-dd HH:mm:ss"));
+        relation.setIsTop(isTop ? 1 : 0);
+        relation.setUpdateTime(dateUtil.getDateTimeByFormat(ldt,"yyyy-MM-dd HH:mm:ss"));
+        userInteractionDao.updateFriendIsTop(relation.getFromUser(),friend,relation.getIsTop(),relation.getUpdateTime());
+        userInteractionRedis.setRedisFriendRelation(relation);
     }
 
     @Transactional
@@ -252,16 +261,20 @@ public class UserInteractionService {
         }
         log.info("执行updateFriendRelation:用户{}，friend={},relation={}",friendRelation.getFromUser(),friend,relation);
         LocalDateTime ldt = LocalDateTime.now();
-        userInteractionDao.updateFriendRelation(friendRelation.getFromUser(),friend,relation,dateUtil.getDateTimeByFormat(ldt,"yyyy-MM-dd HH:mm:ss"));
+        friendRelation.setRelation(relation);
+        friendRelation.setUpdateTime(dateUtil.getDateTimeByFormat(ldt,"yyyy-MM-dd HH:mm:ss"));
+        userInteractionDao.updateFriendRelation(friendRelation.getFromUser(),friend,relation,friendRelation.getUpdateTime());
+        userInteractionRedis.setRedisFriendRelation(friendRelation);
     }
 
     @Transactional
     public void deleteFriend(String token,String friend,boolean deleteChatRecord){
         FriendRelation relation = handleFriendExist(token,friend);
         log.info("执行deleteFriend:用户{}，friend={}",relation.getFromUser(),friend);
-        FriendRelation toRelation = userInteractionDao.findFriendRelation(relation.getToUser(), relation.getFromUser());
+        FriendRelation toRelation = userInteractionRedis.getRedisFriendRelation(relation.getToUser(), relation.getFromUser());
         var userObj = userRedis.findRedisUser(relation.getFromUser());
         userInteractionDao.deleteFriendRelation(relation.getFromUser(),friend);
+        userInteractionRedis.clearRedisFriendRelation(token, friend);
         if(deleteChatRecord){
             userInteractionDao.deleteMsgByUserAndFriend(relation.getFromUser(),friend);
         }

@@ -83,7 +83,7 @@ public class ContentUtil {
             result.append("...");
         }
 
-        result.append(text.substring(start, end));
+        result.append(text, start, end);
 
         if (end < text.length()) {
             result.append("...");
@@ -146,22 +146,10 @@ public class ContentUtil {
         if(!sensitiveListDownload.isEmpty()){
             throw new ServiceException("DOWNLOAD_SENSITIVE_ERROR","包含敏感词"+sensitiveListDownload);
         }
-        var sensitiveListContent = SensitiveUtil.getFoundAllSensitive(topicDTO.getContent());
+        var sensitiveListContent = SensitiveUtil.getFoundAllSensitive(ContentUtil.parseContent(topicDTO.getContent()));
         if(!sensitiveListContent.isEmpty()){
             throw new ServiceException("CONTENT_SENSITIVE_ERROR","包含敏感词"+sensitiveListContent);
         }
     }
 
-    public static boolean isTextFile(String base64Str) {
-        if(base64Str == null || base64Str.isEmpty()){
-            return false;
-        }
-        byte[] buffer = CodeUtil.getBase64Bytes(base64Str);
-        for (byte b : buffer) {
-            if (b == 0) {
-                return false;  // 发现空字节，判定为二进制
-            }
-        }
-        return true;
-    }
 }
