@@ -32,7 +32,7 @@ public class UserInteractionRedis {
                 notices = redisUtil.paginateByIndex(cache,index,userNoticePageSize);
             }
             else{
-                var cache = userInteractionDao.findAllUserNotice(user,0,userNoticePageSize);
+                var cache = userInteractionDao.findAllUserNotice(user,0,userNoticeCacheSize);
                 redisUtil.set(key,cache,1, TimeUnit.HOURS);
                 notices = redisUtil.paginateByIndex(cache,index,userNoticePageSize);
             }
@@ -78,6 +78,7 @@ public class UserInteractionRedis {
         if (redisUtil.hasKey(key)){
             var cache = redisUtil.getList(key,UserNotice.class);
             cache.forEach(n -> n.setStatus(1));
+            clearRedisLastUserNotice(user);
             setRedisUserNoticeUnreadCount(user,0);
             redisUtil.set(key,cache);
         }
@@ -93,6 +94,7 @@ public class UserInteractionRedis {
                 if(idSet.contains(n.getId()) && n.getStatus() == 0){
                     n.setStatus(1);
                     count.getAndIncrement();
+                    clearRedisLastUserNotice(user);
                 }
             });
             setRedisUserNoticeUnreadCount(user,count.get());
@@ -138,6 +140,10 @@ public class UserInteractionRedis {
         if(redisUtil.hasKey(key)){
             redisUtil.set(key,userNotice);
         }
+    }
+
+    public void clearRedisLastUserNotice(String user){
+        redisUtil.deleteAsync("user:notices",user,"last");
     }
 
     public int getRedisUserNoticeUnreadCount(String user){

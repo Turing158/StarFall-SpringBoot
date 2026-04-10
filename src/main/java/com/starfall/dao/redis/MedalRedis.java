@@ -9,6 +9,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -34,7 +35,7 @@ public class MedalRedis {
         if(redisUtil.hasKey(key)){
             var cache = redisUtil.getList(key, MedalMapper.class);
             LocalDateTime ldt = LocalDateTime.now();
-            needDatasource = cache.stream().anyMatch(m -> LocalDateTime.parse(m.getExpireTime()).isBefore(ldt));
+            needDatasource = cache.stream().anyMatch(m -> m.getExpireTime() != null && !m.getExpireTime().isEmpty() && LocalDateTime.parse(m.getExpireTime(), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")).isBefore(ldt));
             if(!needDatasource){
                 medalMappers = cache;
             }
@@ -58,7 +59,7 @@ public class MedalRedis {
             if(redisUtil.hasKey(key)){
                 var cache = redisUtil.getList(key, MedalMapper.class);
                 LocalDateTime ldt = LocalDateTime.now();
-                needDatasource = cache.stream().anyMatch(m -> LocalDateTime.parse(m.getExpireTime()).isBefore(ldt));
+                needDatasource = cache.stream().anyMatch(m -> m.getExpireTime() != null && !m.getExpireTime().isEmpty() && LocalDateTime.parse(m.getExpireTime(), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")).isBefore(ldt));
                 if(!needDatasource){
                     medalMappers = redisUtil.paginateByPageNum(cache, page, userMedalPageSize);
                 }
