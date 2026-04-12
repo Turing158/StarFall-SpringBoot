@@ -4,6 +4,7 @@ import com.starfall.dao.admin.AdminTopicDao;
 import com.starfall.entity.*;
 import com.starfall.service.FileService;
 import com.starfall.util.CodeUtil;
+import com.starfall.util.RedisUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +21,8 @@ public class AdminTopicService {
     private AdminTopicDao topicDao;
     @Autowired
     FileService fileService;
+    @Autowired
+    RedisUtil redisUtil;
 
     public ResultMsg findAllTopic(int page, String keyword) {
         keyword = "%" + keyword + "%";
@@ -58,6 +61,7 @@ public class AdminTopicService {
             MultipartFile file = new MultipartFileImpl(topicOut.getContent(), filename);
             fileService.upload(file, fileFolder, filename);
             TopicItem topicItem = new TopicItem(topicOut.getId(), topicOut.getTopicTitle(), topicOut.getEnTitle(), topicOut.getSource(), topicOut.getAuthor(), topicOut.getLanguage(), topicOut.getAddress(), topicOut.getDownload(), fileFolder + "/" + filename);
+            redisUtil.deleteBatchAsync("topic:*");
             int status1 = topicDao.addTopic(topic);
             int status2 = topicDao.addTopicItem(topicItem);
             return status1 + status2 == 2 ? ResultMsg.success() : ResultMsg.error("DATABASE_ERROR");
@@ -97,6 +101,7 @@ public class AdminTopicService {
             TopicItem topicItem = new TopicItem(topicOut.getId(), topicOut.getTopicTitle(), topicOut.getEnTitle(), topicOut.getSource(), topicOut.getAuthor(), topicOut.getLanguage(), topicOut.getAddress(), topicOut.getDownload(), fileFolder + "/" + filename);
             int status1 = topicDao.updateTopic(topic);
             int status2 = topicDao.updateTopicItem(topicItem);
+            redisUtil.deleteBatchAsync("topic:*");
             return status1 + status2 == 2 ? ResultMsg.success() : ResultMsg.error("DATABASE_ERROR");
         }
         return ResultMsg.error("NOT_EXIST_ERROR");
@@ -111,6 +116,7 @@ public class AdminTopicService {
             int status3 = topicDao.deleteTopicFileByTopicId(id);
             int status4 = topicDao.deleteTopicGalleryByTopicId(id);
             fileService.removeFolder("user/" + topic.getUser() + "/topic/" + topic.getId());
+            redisUtil.deleteBatchAsync("topic:*");
             return status1 + status2 + status3 + status4 == 4 ? ResultMsg.success() : ResultMsg.error("DATABASE_ERROR");
         }
         return ResultMsg.error("NOT_EXIST_ERROR");
@@ -132,6 +138,7 @@ public class AdminTopicService {
     public ResultMsg addTopicComment(Comment comment) {
         if (topicDao.existComment(comment.getTopicId(), comment.getUser(), comment.getDate()) == 0) {
             int status = topicDao.addComment(comment);
+            redisUtil.deleteBatchAsync("topic:*");
             return status == 1 ? ResultMsg.success() : ResultMsg.error("DATABASE_ERROR");
         }
         return ResultMsg.error("EXIST_ERROR");
@@ -141,6 +148,7 @@ public class AdminTopicService {
     public ResultMsg updateTopicComment(Comment comment) {
         if (topicDao.existComment(comment.getOldTopicId(), comment.getOldUser(), comment.getOldDate()) == 1) {
             int status = topicDao.updateComment(comment);
+            redisUtil.deleteBatchAsync("topic:*");
             return status == 1 ? ResultMsg.success() : ResultMsg.error("DATABASE_ERROR");
         }
         return ResultMsg.error("NOT_EXIST_ERROR");
@@ -150,6 +158,7 @@ public class AdminTopicService {
     public ResultMsg deleteTopicComment(Comment comment) {
         if (topicDao.existComment(comment.getTopicId(), comment.getUser(), comment.getDate()) == 1) {
             int status = topicDao.deleteComment(comment);
+            redisUtil.deleteBatchAsync("topic:*");
             return status == 1 ? ResultMsg.success() : ResultMsg.error("DATABASE_ERROR");
         }
         return ResultMsg.error("NOT_EXIST_ERROR");
@@ -170,6 +179,7 @@ public class AdminTopicService {
         DateTimeFormatter df = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         String date = LocalDateTime.now().format(df);
         likeLog.setDate(date);
+        redisUtil.deleteBatchAsync("topic:*");
         if (topicDao.existLikeItemOutStatus(likeLog.getTopicId(), likeLog.getUser()) == 0) {
             int status = topicDao.addLikeItem(likeLog);
             return status == 1 ? ResultMsg.success() : ResultMsg.error("DATABASE_ERROR");
@@ -192,6 +202,7 @@ public class AdminTopicService {
         likeLog.setDate(date);
         if (topicDao.existLikeItemOutStatus(likeLog.getTopicId(), likeLog.getUser()) == 1) {
             int status = topicDao.updateLikeItem(likeLog);
+            redisUtil.deleteBatchAsync("topic:*");
             return status == 1 ? ResultMsg.success() : ResultMsg.error("DATABASE_ERROR");
         }
         return ResultMsg.error("NOT_EXIST_ERROR");
@@ -213,6 +224,7 @@ public class AdminTopicService {
             }catch (Exception e){
                 date = ldt.format(df);
             }
+            redisUtil.deleteBatchAsync("topic:*");
             int status = topicDao.addCollection(collection.getTopicId(), collection.getUser(),date);
             return status == 1 ? ResultMsg.success() : ResultMsg.error("DATABASE_ERROR");
         }
@@ -223,6 +235,7 @@ public class AdminTopicService {
     public ResultMsg deleteUserCollection(String id, String user) {
         if (topicDao.existCollection(id, user) == 1) {
             int status = topicDao.deleteCollection(user, id);
+            redisUtil.deleteBatchAsync("topic:*");
             return status == 1 ? ResultMsg.success() : ResultMsg.error("DATABASE_ERROR");
         }
         return ResultMsg.error("NOT_EXIST_ERROR");
@@ -249,6 +262,7 @@ public class AdminTopicService {
         if(uploadResult.getMsg().equals("SUCCESS")){
             TopicGallery topicGallery = new TopicGallery(galleryId,id,user,ldt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")),fileFolder+filename,label);
             topicDao.insertTopicGallery(topicGallery);
+            redisUtil.deleteBatchAsync("topic:*");
             return ResultMsg.success(topicGallery);
         }
         return ResultMsg.error("UPLOAD_ERROR");
@@ -261,6 +275,7 @@ public class AdminTopicService {
             int status = topicDao.deleteTopicGalleryById(id);
             if (status == 1) {
                 fileService.removeFile(topicGallery.getPath());
+                redisUtil.deleteBatchAsync("topic:*");
                 return ResultMsg.success();
             }
             return ResultMsg.error("DELETE_ERROR");
@@ -288,6 +303,7 @@ public class AdminTopicService {
         MultipartFile file = new MultipartFileImpl(CodeUtil.getBase64Bytes(fileBase64),filename);
         fileService.upload(file,fileFolder,filename);
         int status = topicDao.insertTopicFile(topicFile);
+        redisUtil.deleteBatchAsync("topic:*");
         return status == 1 ? ResultMsg.success(topicFile) : ResultMsg.error("UPLOAD_ERROR");
     }
 
@@ -298,6 +314,7 @@ public class AdminTopicService {
             int status = topicDao.deleteTopicFileById(id);
             if (status == 1) {
                 fileService.removeFile("user/"+topicFile.getUser()+"/topic/"+topicFile.getTopicId()+"/file/"+topicFile.getId());
+                redisUtil.deleteBatchAsync("topic:*");
                 return ResultMsg.success();
             }
             return ResultMsg.error("DELETE_ERROR");

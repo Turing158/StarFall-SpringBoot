@@ -20,7 +20,6 @@ public class AdminNoticeService {
     public ResultMsg findAllNotice(int page) {
         List<Notice> notices = noticeDao.findAllNotice((page-1)*10);
         int count = noticeDao.countNotice();
-        redisUtil.set("notices",notices);
         return ResultMsg.success(notices, count);
     }
 
@@ -29,6 +28,7 @@ public class AdminNoticeService {
             notice.setId(noticeDao.countNotice()+1);
             int result = noticeDao.addNotice(notice);
             if (result == 1) {
+                redisUtil.deleteBatchAsync("notices:*");
                 return ResultMsg.success();
             }
             return ResultMsg.error("DATABASE_ERROR");
@@ -40,6 +40,7 @@ public class AdminNoticeService {
         if(noticeDao.existNoticeById(notice.getId()) == 1){
             int result = noticeDao.updateNotice(notice);
             if (result == 1) {
+                redisUtil.deleteBatchAsync("notices:*");
                 return ResultMsg.success();
             }
             return ResultMsg.error("DATABASE_ERROR");
@@ -52,6 +53,7 @@ public class AdminNoticeService {
         if(noticeDao.existNoticeById(id) == 1){
             int result = noticeDao.deleteNotice(id);
             if (result == 1) {
+                redisUtil.deleteBatchAsync("notices:*");
                 return ResultMsg.success();
             }
             return ResultMsg.error("DATABASE_ERROR");

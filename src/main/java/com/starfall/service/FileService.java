@@ -1,13 +1,11 @@
 package com.starfall.service;
 
 import com.starfall.dao.TopicDao;
-import com.starfall.entity.FileStore;
 import com.starfall.entity.ResultMsg;
 import com.starfall.entity.TopicFile;
-import com.starfall.util.JwtUtil;
 import com.starfall.util.MinioUtil;
-import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -17,10 +15,9 @@ import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 @Service
+@Slf4j
 public class FileService {
 
     @Autowired
@@ -33,6 +30,10 @@ public class FileService {
     }
 
     public void getFile(String filename,HttpServletResponse resp) {
+        getFile(filename,resp,true);
+    }
+
+    public void getFile(String filename,HttpServletResponse resp,boolean defaultContentType) {
         if (filename == null || filename.isBlank()) {
             return;
         }
@@ -42,7 +43,9 @@ public class FileService {
             URL url = new URL(presignedUrl);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
-            resp.setContentType(connection.getContentType());
+            if(defaultContentType){
+                resp.setContentType(connection.getContentType());
+            }
             resp.setContentLength(connection.getContentLength());
             try (InputStream inputStream = connection.getInputStream();
                  OutputStream outputStream = resp.getOutputStream()) {
@@ -53,7 +56,7 @@ public class FileService {
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error downloading file: {}", filename, e);
             resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         }
     }
@@ -64,14 +67,14 @@ public class FileService {
             resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
             return;
         }
+        resp.setContentType("application/octet-stream");
         try{
             resp.setHeader("Content-Disposition", "attachment; filename=" + new String(file.getFileName().getBytes(),"ISO8859-1"));
         }
         catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
             resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         }
-        getFile("user/" + file.getUser() + "/topic/" + file.getTopicId() + "/file/" + file.getId(),resp);
+        getFile("user/" + file.getUser() + "/topic/" + file.getTopicId() + "/file/" + file.getId(),resp,false);
     }
 
     public ResultMsg removeFile(String filename){

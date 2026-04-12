@@ -11,6 +11,7 @@ import com.starfall.service.FileService;
 import com.starfall.util.EncDecUtil;
 import com.starfall.util.CodeUtil;
 import com.starfall.util.DateUtil;
+import com.starfall.util.RedisUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
@@ -38,6 +39,8 @@ public class AdminUserService {
     private AdminMessageDao messageDao;
     @Autowired
     DateUtil dateUtil;
+    @Autowired
+    private RedisUtil redisUtil;
 
 
     public ResultMsg findAllUsersForSelect(String keyword) {
@@ -65,9 +68,7 @@ public class AdminUserService {
     public ResultMsg findAllUsers(int page,String keyword) {
         keyword = "%" + keyword + "%";
         List<User> users = userDao.findUserByPage((page-1)*10,keyword);
-        users.forEach(user -> {
-            user.setPassword("***");
-        });
+        users.forEach(user -> user.setPassword("***"));
         return ResultMsg.success(users,userDao.countUser(keyword));
     }
 
@@ -82,6 +83,7 @@ public class AdminUserService {
                 user.setPassword(encDecUtil.aesEncrypt(user.getPassword()));
                 userDao.insertPersonalized(new UserPersonalized(user.getUser(),"这个人很懒~ 什么都没留下",null,0,0,0,0,0, user.getCreateTime(), dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss")));
                 int status = userDao.insertUser(user);
+                redisUtil.deleteBatchAsync("user:*");
                 return status == 1 ? ResultMsg.success() : ResultMsg.error("DATASOURCE_ERROR");
             }
             return ResultMsg.error("EMAIL_EXIST");
@@ -98,6 +100,7 @@ public class AdminUserService {
                         user.setPassword(encDecUtil.aesEncrypt(user.getPassword()));
                         userDao.updatePassword(user);
                     }
+                    redisUtil.deleteBatchAsync("user:*");
                     user.setUpdateTime(dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss"));
                     int status1 = userDao.updateUser(user);
 
@@ -129,6 +132,9 @@ public class AdminUserService {
             homeDao.deleteHomeTalkByUser(user);
             messageDao.deleteMessageByUser(user);
             fileService.removeFolder("user/"+user);
+            redisUtil.deleteBatchAsync("user:*");
+            redisUtil.deleteBatchAsync("topic:*");
+            redisUtil.deleteBatchAsync("homeTalk:*");
             return status == 1 ? ResultMsg.success() : ResultMsg.error("DATASOURCE_ERROR");
         }
         return ResultMsg.error("USER_NOT_EXIST");
@@ -161,6 +167,7 @@ public class AdminUserService {
         if(!oldAvatar.equals("default.png")){
             fileService.removeFile(oldAvatar);
         }
+        redisUtil.deleteBatchAsync("user:*");
         userDao.updateAvatar(user,folder+"/"+fileName,dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss"));
         return ResultMsg.success(fileName);
     }
@@ -173,6 +180,7 @@ public class AdminUserService {
     public ResultMsg appendSignIn(SignIn signIn){
         if(userDao.existSignIn(signIn.getUser(),signIn.getDate()) == 0){
             int status = userDao.insertSignIn(signIn);
+            redisUtil.deleteBatchAsync("signIn:*");
             return status == 1 ? ResultMsg.success() : ResultMsg.error("DATASOURCE_ERROR");
         }
         return ResultMsg.error("SIGN_IN_EXIST");
@@ -180,6 +188,7 @@ public class AdminUserService {
 
     public ResultMsg updateSignIn(SignIn signIn){
         int status = userDao.updateSignIn(signIn);
+        redisUtil.deleteBatchAsync("signIn:*");
         return status == 1 ? ResultMsg.success() : ResultMsg.error("DATASOURCE_ERROR");
     }
 
@@ -187,6 +196,7 @@ public class AdminUserService {
     public ResultMsg deleteSignIn(SignIn signIn){
         if(userDao.existSignIn(signIn.getUser(),signIn.getDate()) == 1){
             int status = userDao.deleteSignIn(signIn);
+            redisUtil.deleteBatchAsync("signIn:*");
             return status == 1 ? ResultMsg.success() : ResultMsg.error("DATASOURCE_ERROR");
         }
         return ResultMsg.error("SIGN_IN_NOT_EXIST");
@@ -197,6 +207,7 @@ public class AdminUserService {
     }
 
     public void updatePersonalized(UserPersonalized userPersonalized){
+        redisUtil.deleteBatchAsync("user:*");
         userDao.updatePersonalized(userPersonalized);
     }
 
@@ -213,6 +224,7 @@ public class AdminUserService {
         if(medalMapper.getExpireTime().trim().isEmpty()){
             medalMapper.setExpireTime(null);
         }
+        redisUtil.deleteBatchAsync("user:*");
         userDao.insertMedalMapper(medalMapper);
     }
 
@@ -221,11 +233,13 @@ public class AdminUserService {
         if(medalMapper.getExpireTime().trim().isEmpty()){
             medalMapper.setExpireTime(null);
         }
+        redisUtil.deleteBatchAsync("user:*");
         userDao.updateMedalMapper(medalMapper);
     }
 
     @Transactional
     public void deleteMedalMapper(String user,String id) {
+        redisUtil.deleteBatchAsync("user:*");
         userDao.deleteMedalMapper(user,id);
     }
 
@@ -236,16 +250,19 @@ public class AdminUserService {
     @Transactional
     public void insertMedal(Medal medal) {
         medal.setId("m"+dateUtil.getDateTimeByFormat("yyyyMMddHHmmssSSSS") + CodeUtil.getCode(4));
+        redisUtil.deleteBatchAsync("user:*");
         userDao.insertMedal(medal);
     }
 
     @Transactional
     public void updateMedal(Medal medal) {
+        redisUtil.deleteBatchAsync("user:*");
         userDao.updateMedal(medal);
     }
 
     @Transactional
     public void deleteMedal(String id) {
+        redisUtil.deleteBatchAsync("user:*");
         userDao.deleteMedal(id);
     }
 }

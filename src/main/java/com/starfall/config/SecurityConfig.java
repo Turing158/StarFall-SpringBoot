@@ -1,7 +1,6 @@
 package com.starfall.config;
 
 import com.starfall.filter.JWTAuthenticationFilter;
-import com.starfall.filter.RoleFilter;
 import com.starfall.util.EncDecUtil;
 import com.starfall.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,8 +44,7 @@ public class SecurityConfig{
                 // 禁用默认登出页
                 .logout(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests((authorize) -> authorize
-                        .requestMatchers("/message/**").anonymous()
-                        .requestMatchers("/file/url/**").anonymous()
+                        .requestMatchers("/file/url/download/**").anonymous()
                         .requestMatchers(jwtUtil.getDirectAccessUrl()).anonymous()
                         .anyRequest().authenticated())
                 // 自定义的过滤器

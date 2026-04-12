@@ -11,6 +11,7 @@ import com.starfall.service.WebSocketService;
 import com.starfall.util.CodeUtil;
 import com.starfall.util.DateUtil;
 import com.starfall.util.JsonOperate;
+import com.starfall.util.RedisUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
@@ -27,11 +28,15 @@ public class AdminUserInteractionService {
     WebSocketService webSocketService;
     @Autowired
     DateUtil dateUtil;
+    @Autowired
+    RedisUtil redisUtil;
+
+
 
     public Pair<List<UserNoticeAdminVO>,Integer> findAllUserNotice(String user,int page, String type) {
         List<UserNoticeAdminVO> list;
         int num;
-        if(type.equals("")){
+        if(type.isEmpty()){
             list = adminUserInteractionDao.findAllUserNotice(user,(page-1)*10);
             num = adminUserInteractionDao.countAllUserNotice(user);
         }
@@ -50,6 +55,7 @@ public class AdminUserInteractionService {
     public void insertUserNotice(UserNoticeAdminVO userNoticeAdminVO){
         userNoticeAdminVO.setId("un" + dateUtil.getDateTimeByFormat("yyyyMMddHHmmssSSSS") + CodeUtil.getCode(6));
         adminUserInteractionDao.insertUserNotice(userNoticeAdminVO);
+        redisUtil.deleteBatchAsync("user:*");
         if(userNoticeAdminVO.isSendNotice()){
             if(userNoticeAdminVO.getType() == UserNoticeType.all){
                 webSocketService.sendMessageAll(JsonOperate.toJson(userNoticeAdminVO));
@@ -62,16 +68,19 @@ public class AdminUserInteractionService {
 
     @Transactional
     public void updateUserNotice(UserNoticeAdminVO userNoticeAdminVO){
+        redisUtil.deleteBatchAsync("user:*");
         adminUserInteractionDao.updateUserNotice(userNoticeAdminVO);
     }
 
     @Transactional
     public void updateUserNoticeRead(String id,boolean isRead){
+        redisUtil.deleteBatchAsync("user:*");
         adminUserInteractionDao.updateUserNoticeRead(id,isRead ? 1 : 0);
     }
 
     @Transactional
     public void deleteUserNotice(String id){
+        redisUtil.deleteBatchAsync("user:*");
         adminUserInteractionDao.deleteUserNotice(id);
     }
 
@@ -87,6 +96,7 @@ public class AdminUserInteractionService {
         if(adminUserInteractionDao.countFriendApplicationByFromUserAndToUserAndStatus0(friendApplication.getToUser(),friendApplication.getFromUser()) != 0){
             throw new AdminServiceException("TO_USER_EXIST_APPLICATION","对方用户已经存在未处理的好友申请");
         }
+        redisUtil.deleteBatchAsync("user:*");
         friendApplication.setId("fa" + dateUtil.getDateTimeByFormat("yyyyMMddHHmmssSSSS") + CodeUtil.getCode(6));
         adminUserInteractionDao.insertFriendApplication(friendApplication);
     }
@@ -96,11 +106,13 @@ public class AdminUserInteractionService {
         if(adminUserInteractionDao.countFriendApplicationByFromUserAndToUserAndStatus0(friendApplication.getToUser(),friendApplication.getFromUser()) != 0){
             throw new AdminServiceException("TO_USER_EXIST_APPLICATION","对方用户已经存在未处理的好友申请");
         }
+        redisUtil.deleteBatchAsync("user:*");
         adminUserInteractionDao.updateFriendApplication(friendApplication);
     }
 
     @Transactional
     public void deleteFriendApplication(String id){
+        redisUtil.deleteBatchAsync("user:*");
         adminUserInteractionDao.deleteFriendApplication(id);
     }
 
@@ -119,12 +131,14 @@ public class AdminUserInteractionService {
         user1FriendRelation.setUpdateTime(dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss"));
         user2FriendRelation.setCreateTime(dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss"));
         user2FriendRelation.setUpdateTime(dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss"));
+        redisUtil.deleteBatchAsync("user:*");
         adminUserInteractionDao.insertFriendRelation(user1FriendRelation,user2FriendRelation);
     }
 
     @Transactional
     public void updateFriendRelation(FriendRelation friendRelation){
         friendRelation.setUpdateTime(dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss"));
+        redisUtil.deleteBatchAsync("user:*");
         adminUserInteractionDao.updateFriendRelation(friendRelation);
     }
 
@@ -137,5 +151,6 @@ public class AdminUserInteractionService {
             }
         }
         adminUserInteractionDao.deleteFriendRelation(id);
+        redisUtil.deleteBatchAsync("user:*");
     }
 }

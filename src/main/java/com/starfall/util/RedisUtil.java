@@ -49,21 +49,13 @@ public class RedisUtil {
             time += random.nextInt(1000);
         }
         else{
-            switch (timeUnit){
-                case SECONDS:
-                    time = TimeUnit.SECONDS.toMillis(time);
-                    break;
-                case MINUTES:
-                    time = TimeUnit.MINUTES.toMillis(time);
-                    break;
-                case HOURS:
-                    time = TimeUnit.HOURS.toMillis(time);
-                    break;
-                case DAYS:
-                    time = TimeUnit.DAYS.toMillis(time);
-                    break;
-                default:
-                    break;
+            switch (timeUnit) {
+                case SECONDS -> time = TimeUnit.SECONDS.toMillis(time);
+                case MINUTES -> time = TimeUnit.MINUTES.toMillis(time);
+                case HOURS -> time = TimeUnit.HOURS.toMillis(time);
+                case DAYS -> time = TimeUnit.DAYS.toMillis(time);
+                default -> {
+                }
             }
             time += random.nextInt(10000);
         }
@@ -74,13 +66,11 @@ public class RedisUtil {
 
     public boolean hasKey(String... key){
 //        log.info("【检查key是否存在】{} : {}",key,r);
-        boolean r = Boolean.TRUE.equals(stringRedisTemplate.hasKey(joinKey(key)));
-        return r;
+        return Boolean.TRUE.equals(stringRedisTemplate.hasKey(joinKey(key)));
     }
 
     public boolean hasKey(String key){
-        boolean r = Boolean.TRUE.equals(stringRedisTemplate.hasKey(key));
-        return r;
+        return Boolean.TRUE.equals(stringRedisTemplate.hasKey(key));
     }
 
     public  <T> T get(Class<T> valueType,String... keyParam){
@@ -144,6 +134,14 @@ public class RedisUtil {
         }
     }
 
+    @Async
+    public void deleteBatchAsync(String formatKey){
+        Set<String> keys = stringRedisTemplate.keys(formatKey);
+        if (keys != null) {
+            stringRedisTemplate.delete(keys);
+        }
+    }
+
     public Long getExpire(String key){
         return getExpire(key, TimeUnit.MILLISECONDS);
     }
@@ -154,10 +152,6 @@ public class RedisUtil {
 
     public ValueOperations<String,String> opsForValue(){
         return stringRedisTemplate.opsForValue();
-    }
-
-    public ListOperations<String,String>  opsForList(){
-        return stringRedisTemplate.opsForList();
     }
 
     public void increment(String... keyParam){
@@ -199,7 +193,7 @@ public class RedisUtil {
     }
 
     public <T> List<T> paginateByIndex(List<T> array, int index, int pageSize) {
-        if (array == null || array.size() == 0) {
+        if (array == null || array.isEmpty()) {
             return List.of();
         }
         if (index >= array.size()) {
