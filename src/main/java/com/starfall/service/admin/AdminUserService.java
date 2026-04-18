@@ -103,7 +103,7 @@ public class AdminUserService {
                     redisUtil.deleteBatchAsync("user:*");
                     user.setUpdateTime(dateUtil.getDateTimeByFormat("yyyy-MM-dd HH:mm:ss"));
                     int status1 = userDao.updateUser(user);
-
+                    userDao.updateCreateTime(user.getUser(),user.getCreateTime());
                     return status1 == 1 ? ResultMsg.success() : ResultMsg.error("DATASOURCE_ERROR");
                 }
                 return ResultMsg.error("EMAIL_EXIST");
@@ -180,7 +180,7 @@ public class AdminUserService {
     public ResultMsg appendSignIn(SignIn signIn){
         if(userDao.existSignIn(signIn.getUser(),signIn.getDate()) == 0){
             int status = userDao.insertSignIn(signIn);
-            redisUtil.deleteBatchAsync("signIn:*");
+            redisUtil.deleteBatchAsync("user:*");
             return status == 1 ? ResultMsg.success() : ResultMsg.error("DATASOURCE_ERROR");
         }
         return ResultMsg.error("SIGN_IN_EXIST");
@@ -188,7 +188,7 @@ public class AdminUserService {
 
     public ResultMsg updateSignIn(SignIn signIn){
         int status = userDao.updateSignIn(signIn);
-        redisUtil.deleteBatchAsync("signIn:*");
+        redisUtil.deleteBatchAsync("user:*");
         return status == 1 ? ResultMsg.success() : ResultMsg.error("DATASOURCE_ERROR");
     }
 
@@ -196,7 +196,7 @@ public class AdminUserService {
     public ResultMsg deleteSignIn(SignIn signIn){
         if(userDao.existSignIn(signIn.getUser(),signIn.getDate()) == 1){
             int status = userDao.deleteSignIn(signIn);
-            redisUtil.deleteBatchAsync("signIn:*");
+            redisUtil.deleteBatchAsync("user:*");
             return status == 1 ? ResultMsg.success() : ResultMsg.error("DATASOURCE_ERROR");
         }
         return ResultMsg.error("SIGN_IN_NOT_EXIST");

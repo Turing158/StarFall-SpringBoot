@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.starfall.entity.MinioStatusDTO;
 import com.starfall.entity.NacosStatusDTO;
 import com.starfall.entity.RedisStatusDTO;
+import com.starfall.util.CodeUtil;
 import com.starfall.util.RedisUtil;
 import io.minio.*;
 import io.minio.messages.Item;
@@ -28,6 +29,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -389,4 +392,41 @@ public class AdminOtherService {
 
         return objInfo;
     }
+    String[] medalPath = {
+            "D:\\EducationalData\\Ending\\StarFall-Forum-vue\\src\\assets\\img\\medal",
+            "D:\\EducationalData\\Ending\\nginx\\html\\img\\medal",
+            "D:\\EducationalData\\Ending\\StarFall-Forum-vue\\public\\img\\medal"
+    };
+    public String uploadMedalImg(String name, String base64){
+        try {
+            byte[] bytes = CodeUtil.getBase64Bytes(base64);
+            for (String path : medalPath) {
+                File dir = new File(path);
+                if (!dir.exists()) {
+                    dir.mkdirs();
+                }
+                File file = new File(dir, name);
+                try (FileOutputStream fos = new FileOutputStream(file)) {
+                    fos.write(bytes);
+                }
+            }
+            return name;
+        } catch (Exception e) {
+            log.error("上传勋章图片失败：{}", e.getMessage());
+            return null;
+        }
+    }
+
+    public List<String> getMedalImg(){
+        File dir = new File(medalPath[2]);
+        if (dir.exists() && dir.isDirectory()) {
+            String[] names = dir.list();
+            if (names != null) {
+                return Arrays.asList(names);
+            }
+        }
+        return Collections.emptyList();
+    }
+
+    
 }

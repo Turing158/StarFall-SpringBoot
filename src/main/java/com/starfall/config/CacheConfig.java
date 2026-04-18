@@ -1,5 +1,6 @@
 package com.starfall.config;
 
+import org.jetbrains.annotations.NotNull;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.interceptor.KeyGenerator;
 import org.springframework.context.annotation.Bean;
@@ -13,8 +14,9 @@ public class CacheConfig {
     @Bean
     public KeyGenerator keyGenerator(){
         return new KeyGenerator() {
+            @NotNull
             @Override
-            public Object generate(Object target, Method method, Object... params) {
+            public Object generate(@NotNull Object target, @NotNull Method method, @NotNull Object... params) {
                 StringBuilder sb = new StringBuilder();
                 sb.append(target.getClass().getName());
                 sb.append(method.getName());

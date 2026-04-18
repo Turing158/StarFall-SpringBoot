@@ -54,12 +54,12 @@ public class LiveRedis {
         if(page <= liveHistoryCachePage){
             if(redisUtil.hasKey(key)){
                 var cache = redisUtil.getList(key, LiveBroadcastHistory.class);
-                liveBroadcastHistories = redisUtil.paginateByIndex(cache, (page-1)*liveHistoryPageSize, liveHistoryPageSize);
+                liveBroadcastHistories = redisUtil.paginateByPageNum(cache, page, liveHistoryPageSize);
             }
             else{
                 var cache = liveDao.findAllLiveByUser(user,0, liveHistoryPageSize * liveHistoryCachePage);
                 redisUtil.set(key, cache, 1, TimeUnit.HOURS);
-                liveBroadcastHistories = redisUtil.paginateByIndex(cache, (page-1)*liveHistoryPageSize, liveHistoryPageSize);
+                liveBroadcastHistories = redisUtil.paginateByPageNum(cache, page, liveHistoryPageSize);
             }
         }
         else{

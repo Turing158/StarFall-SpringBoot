@@ -52,6 +52,9 @@ public class UserInteractionService {
             log.warn("用户{}尝试添加不存在的用户{}为好友，已拒绝",user,friend);
             throw new ServiceException("USER_NOT_EXIST","用户不存在");
         }
+        if(user.equals(friend)){
+            throw new ServiceException("CANNOT_ADD_SELF","不能添加自己为好友");
+        }
         if(userInteractionDao.countFriendRelationWithFriend(user,friend) != 0){
             log.warn("用户{}尝试添加已是好友的用户{}为好友，已拒绝",user,friend);
             throw new ServiceException("ALREADY_FRIEND","用户已是好友");
@@ -105,7 +108,7 @@ public class UserInteractionService {
 
     @Transactional
     public ResultMsg acceptApplication(String user,UserNotice userNotice,FriendApplication application,boolean accept){
-        log.info("此acceptApplication方法直接用于操作申请");
+        log.info("此acceptApplication方法直接用于操作申请:{}",application);
         if(!(application.getFromUser().equals(user) || application.getToUser().equals(user))){
             log.warn("用户{}尝试处理不属于自己的好友申请{}，已拒绝",user,application.getId());
             return ResultMsg.error("NO_PERMISSION");
@@ -141,8 +144,8 @@ public class UserInteractionService {
         String date = dateUtil.getDateTimeByFormat(ldt,"yyyy-MM-dd HH:mm:ss");
         String fromRelationId = "fr" + dateUtil.getDateTimeByFormat(ldt,"yyyyMMddHHmmssSSSS") + CodeUtil.getCode(6);
         String toRelationId = "fr" + dateUtil.getDateTimeByFormat(ldt,"yyyyMMddHHmmssSSSS") + CodeUtil.getCode(6);
-        FriendRelation fromUserRelation = new FriendRelation(fromRelationId,application.getFromUser(),application.getToUser(),0,null,date,date,0);
-        FriendRelation toUserRelation = new FriendRelation(toRelationId,application.getToUser(),application.getFromUser(),0,null,date,date,0);
+        FriendRelation fromUserRelation = new FriendRelation(fromRelationId,application.getFromUser(),application.getToUser(),1,null,date,date,0);
+        FriendRelation toUserRelation = new FriendRelation(toRelationId,application.getToUser(),application.getFromUser(),1,null,date,date,0);
         log.info("生成好友关系记录：fromRelationId={},toRelationId={}",fromRelationId,toRelationId);
         userInteractionRedis.setRedisFriendRelation(fromUserRelation);
         userInteractionRedis.setRedisFriendRelation(toUserRelation);
@@ -187,12 +190,12 @@ public class UserInteractionService {
         }
         User toUserObj= userRedis.findRedisUser(toUser);
         String date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-        Message message = new Message(fromUser,friendRelation.getAlias() == null || friendRelation.getAlias().isEmpty() ? fromUserObj.getName() : friendRelation.getAlias(),fromUserObj.getAvatar(),toUser,toUserObj.getName(),toUserObj.getAvatar(),date,content);
+        Message message = new Message(fromUser,friendRelation.getAlias() == null || friendRelation.getAlias().isEmpty() ? fromUserObj.getName() : friendRelation.getAlias(),fromUserObj.getAvatar(),toUser,toUserObj.getName(),toUserObj.getAvatar(),date,content,friendRelation.getRelation() == 1);
         List<Message> fromUserMsgs = userInteractionDao.findFromUserMsgByFromUserAndToUser(fromUser,toUser);
         if(fromUserMsgs.isEmpty()){
 //          直接保存新数据
             userInteractionDao.insertMsg(message);
-            return friendRelation.getRelation() == 1 ? message : null;
+            return message;
         }
         Message fromUserMsg = fromUserMsgs.get(0);
         String oldDateTimeStr = fromUserMsg.getDate();
@@ -201,13 +204,15 @@ public class UserInteractionService {
         LocalDateTime newDateTime = LocalDateTime.parse(date,df);
         if(oldDateTime.plusMinutes(1).isAfter(newDateTime)){
 //          更新
+            fromUserMsg.setFromName(friendRelation.getAlias() == null || friendRelation.getAlias().isEmpty() ? fromUserObj.getName() : friendRelation.getAlias());
+            fromUserMsg.setCanNotice(friendRelation.getRelation() == 1);
             fromUserMsg.setContent(fromUserMsg.getContent()+"[&divide&]"+content);
             userInteractionDao.updateMsgContent(fromUser,toUser,oldDateTimeStr,fromUserMsg.getContent());
-            return friendRelation.getRelation() == 1 ? fromUserMsg : null;
+            return fromUserMsg;
         }
         // 直接保存新数据
         userInteractionDao.insertMsg(message);
-        return friendRelation.getRelation() == 1 ? message : null;
+        return message;
     }
 
     public FriendRelation handleFriendExist(String token,String friend){
@@ -278,8 +283,8 @@ public class UserInteractionService {
         if(deleteChatRecord){
             userInteractionDao.deleteMsgByUserAndFriend(relation.getFromUser(),friend);
         }
-        FriendDeleteNoticeAction friendDeleteNoticeAction = new FriendDeleteNoticeAction(relation.getFromUser(),userObj.getName(),toRelation.getAlias(),deleteChatRecord);
-        userNoticeService.insertNotice(relation.getFromUser(),UserNoticeType.friend,"失去了一个好友",JsonOperate.toJson(friendDeleteNoticeAction,false));
+        FriendDeleteNoticeAction friendDeleteNoticeAction = new FriendDeleteNoticeAction(relation.getFromUser(),userObj.getName(),toRelation.getAlias(),true,deleteChatRecord);
+        userNoticeService.insertNotice(friend,UserNoticeType.friend,"失去了一个好友",JsonOperate.toJson(friendDeleteNoticeAction,false));
     }
 
 }

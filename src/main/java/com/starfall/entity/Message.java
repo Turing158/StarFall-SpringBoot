@@ -16,6 +16,7 @@ public class Message {
     String toAvatar;
     String date;
     String content;
+    boolean canNotice;
     public Message(String fromUser, String toUser, String date, String content) {
         this.fromUser = fromUser;
         this.toUser = toUser;

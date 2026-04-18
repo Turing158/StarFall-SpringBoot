@@ -11,5 +11,6 @@ public class FriendDeleteNoticeAction {
     String user;
     String name;
     String alias;
+    boolean isDelete;
     boolean deleteAllMsg;
 }

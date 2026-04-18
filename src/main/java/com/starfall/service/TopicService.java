@@ -589,13 +589,13 @@ public class TopicService {
             throw new ServiceException("DONT_DO","不允许这样操作主题");
         }
         var notice = userNoticeService.findUserNoticeById(noticeId);
-        if(topic.getDisplay() == -1 && notice != null){
-            LocalDateTime ldt = LocalDateTime.parse(notice.getCreateTime(), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-            //判断5分钟之后，才能再次对主题进行审核，防止审核人员恶意反复审核
-            if(ldt.plusMinutes(5).isAfter(LocalDateTime.now())){
-                throw new ServiceException("NOT_AFTER_5_MIN","请仔细审核，5分钟内不能再次审核该帖子");
-            }
-        }
+//        if(topic.getDisplay() == -1 && notice != null){
+//            LocalDateTime ldt = LocalDateTime.parse(notice.getCreateTime(), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+//            //判断5分钟之后，才能再次对主题进行审核，防止审核人员恶意反复审核
+//            if(ldt.plusMinutes(5).isAfter(LocalDateTime.now())){
+//                throw new ServiceException("NOT_AFTER_5_MIN","请仔细审核，5分钟内不能再次审核该帖子");
+//            }
+//        }
         if(topic.getDisplay() != display){
             TopicOut topicOut = topicRedis.getRedisTopicOut(id);
             topicDao.updateTopicDisplay(display,id);
@@ -632,10 +632,10 @@ public class TopicService {
         }
         var notice = userNoticeService.findUserNoticeById(noticeId);
         LocalDateTime noticeLDT = LocalDateTime.parse(notice.getCreateTime(), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-        if(noticeLDT.plusMinutes(5).isAfter(LocalDateTime.now())){
-            throw new ServiceException("NOT_BEFORE_5_MIN","请修改帖子后，5分钟后再完成整改");
-
-        }
+//        if(noticeLDT.plusMinutes(5).isAfter(LocalDateTime.now())){
+//            throw new ServiceException("NOT_BEFORE_5_MIN","请修改帖子后，5分钟后再完成整改");
+//
+//        }
         userNoticeService.updateTopicNoticeActionHandle(notice,user);
 
         if(notice == null || !notice.getUser().equals(user)){

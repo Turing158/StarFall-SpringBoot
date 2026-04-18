@@ -45,7 +45,7 @@ public interface AdminUserDao {
     @Select("select count(*) from starfall.sign_in where user=#{user} and date=#{date} limit 1")
     int existSignIn(String user,String date);
 
-    @Insert("insert into starfall.user values(#{user},#{password},#{name},#{gender},#{email},#{birthday},#{exp},#{level},#{avatar},#{role})")
+    @Insert("insert into starfall.user values(#{user},#{password},#{name},#{gender},#{email},#{birthday},#{exp},#{level},#{avatar},#{role},#{createTime},#{updateTime})")
     int insertUser(User user);
 
     @Insert("insert into starfall.sign_in values(#{user},#{date},#{message},#{emotion})")
@@ -53,6 +53,9 @@ public interface AdminUserDao {
 
     @Update("update starfall.user set name=#{name},gender=#{gender},email=#{email},birthday=#{birthday},exp=#{exp},level=#{level},role=#{role} where user=#{user}")
     int updateUser(User user);
+
+    @Update("update starfall.user set create_time=#{createTime} where user=#{user}")
+    int updateCreateTime(String user,String createTime);
 
     @Update("update starfall.user set password=#{password} where user=#{user}")
     int updatePassword(User user);
@@ -79,7 +82,7 @@ public interface AdminUserDao {
     @Select("select count(*) from starfall.user_personalized")
     int countAllPersonalized();
 
-    @Insert("insert into starfall.user_personalized values(#{user},#{signature},#{onlineName},#{showOnlineName},#{showCollection},#{showBirthday},#{showGender},#{showEmail},#{createTime},#{updateTime})")
+    @Insert("insert into starfall.user_personalized values(#{user},#{signature},null,#{onlineName},#{showOnlineName},#{showCollection},#{showBirthday},#{showGender},#{showEmail},#{createTime},#{updateTime})")
     int insertPersonalized(UserPersonalized userPersonalized);
 
     @Update("update starfall.user_personalized set " +

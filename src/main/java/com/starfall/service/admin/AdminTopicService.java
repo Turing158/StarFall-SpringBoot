@@ -113,11 +113,11 @@ public class AdminTopicService {
             TopicOut topic = topicDao.findTopicById(id);
             int status1 = topicDao.deleteTopicItem(id);
             int status2 = topicDao.deleteTopic(id);
-            int status3 = topicDao.deleteTopicFileByTopicId(id);
-            int status4 = topicDao.deleteTopicGalleryByTopicId(id);
+            topicDao.deleteTopicFileByTopicId(id);
+            topicDao.deleteTopicGalleryByTopicId(id);
             fileService.removeFolder("user/" + topic.getUser() + "/topic/" + topic.getId());
             redisUtil.deleteBatchAsync("topic:*");
-            return status1 + status2 + status3 + status4 == 4 ? ResultMsg.success() : ResultMsg.error("DATABASE_ERROR");
+            return status1 + status2 == 2 ? ResultMsg.success() : ResultMsg.error("DATABASE_ERROR");
         }
         return ResultMsg.error("NOT_EXIST_ERROR");
     }

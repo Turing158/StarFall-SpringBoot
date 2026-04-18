@@ -41,7 +41,7 @@ public class LiveService {
 
     public Pair<List<LiveBroadcastHistory>,Integer> findAllLiveByUser(String token, int page){
         String user = jwtUtil.getTokenField(token,"USER");
-        return Pair.of(liveRedis.getRedisLiveHistory(user,(page-1)*10),liveRedis.getRedisLiveHistoryCount(user));
+        return Pair.of(liveRedis.getRedisLiveHistory(user,page),liveRedis.getRedisLiveHistoryCount(user));
     }
 
     @Transactional
@@ -106,7 +106,7 @@ public class LiveService {
         liveRedis.clearRedisLiveHistory(user);
         liveRedis.clearRedisLiveShow();
         LiveNoticeAction liveNoticeAction = new LiveNoticeAction(id,liveBroadcast.getUrl(),reason,user,status);
-        userNoticeService.insertNotice(user, UserNoticeType.live,"直播申请"+(status ? "已通过" : "不通过"), JsonOperate.toJson(liveNoticeAction,false));
+        userNoticeService.insertNotice(liveBroadcast.getUser(), UserNoticeType.live,"直播申请"+(status ? "已通过" : "不通过"), JsonOperate.toJson(liveNoticeAction,false));
 //        messageService.SendMessage(token,liveBroadcast.getUser(),"您的直播申请("+liveBroadcast.getUrl()+")已被"+(status?"<span style='color:darkgreen'>通过</span>":"<span style='color:darkred'>拒绝</span>")+"，原因："+reason);
         if(result <= 0){
             throw new ServiceException("DATA_ERROR","直播申请状态更新失败");
