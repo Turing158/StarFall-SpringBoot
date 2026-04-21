@@ -1,0 +1,5 @@
+minio.exe server data存放路径 --console-address ":9009" --address ":9000"
+redis-server.exe redis.windows.conf
+clamd
+在bin下运行：startup.cmd -m standalone
+运行elasticsearch.bat

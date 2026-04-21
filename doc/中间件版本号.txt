@@ -1,0 +1,6 @@
+Nacos：2.1.1
+Redis：3.0.504
+Elasticsearch：8.18.8
+ClamAV：1.4.4/27955
+MinIO：RELEASE.2023-07-21T21-12-44Z
+Nginx：1.28.0
