@@ -68,6 +68,9 @@ public class AdminOtherService {
     @Value("${spring.cloud.nacos.config.password:}")
     private String password;
 
+    @Value("${medal.save.path:}")
+    String[] medalPath = {};
+
     public RedisStatusDTO findRedisStatus() {
         RedisStatusDTO redisStatusDTO = new RedisStatusDTO();
 
@@ -392,11 +395,7 @@ public class AdminOtherService {
 
         return objInfo;
     }
-    String[] medalPath = {
-            "D:\\EducationalData\\Ending\\StarFall-Forum-vue\\src\\assets\\img\\medal",
-            "D:\\EducationalData\\Ending\\nginx\\html\\img\\medal",
-            "D:\\EducationalData\\Ending\\StarFall-Forum-vue\\public\\img\\medal"
-    };
+
     public String uploadMedalImg(String name, String base64){
         try {
             byte[] bytes = CodeUtil.getBase64Bytes(base64);
